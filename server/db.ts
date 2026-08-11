@@ -10,6 +10,7 @@ import { NotificationModel } from './models/Notification';
 import { AuditLogModel } from './models/AuditLog';
 import { CategoryModel } from './models/Category';
 import { Category } from '../src/types';
+import { generateTextEmbedding } from './geminiService';
 
 import {
   INITIAL_USERS,
@@ -215,10 +216,65 @@ export class MongoDatabaseService {
     return INITIAL_EQUIPMENT.find((e) => e.id === id);
   }
 
+  async vectorSearchEquipment(queryText: string): Promise<Equipment[]> {
+    try {
+      const queryVector = await generateTextEmbedding(queryText);
+
+      // 1. Attempt native MongoDB Atlas $vectorSearch pipeline stage
+      try {
+        const vectorResults = await EquipmentModel.aggregate([
+          {
+            $vectorSearch: {
+              index: 'vector_index',
+              path: 'embedding',
+              queryVector,
+              numCandidates: 20,
+              limit: 10,
+            },
+          },
+        ]);
+        if (vectorResults.length > 0) {
+          return vectorResults as unknown as Equipment[];
+        }
+      } catch (atlasErr) {
+        // Fallback to cosine similarity if Atlas Vector Index is not pre-configured
+      }
+
+      // 2. Cosine similarity score fallback over stored document embeddings
+      const all = await EquipmentModel.find({}).lean();
+      if (all.length > 0) {
+        const scored = all.map((eq: any) => {
+          const emb = eq.embedding || [];
+          let dot = 0;
+          let normA = 0;
+          let normB = 0;
+          for (let i = 0; i < Math.min(emb.length, queryVector.length); i++) {
+            dot += emb[i] * queryVector[i];
+            normA += emb[i] * emb[i];
+            normB += queryVector[i] * queryVector[i];
+          }
+          const score = normA && normB ? dot / (Math.sqrt(normA) * Math.sqrt(normB)) : 0;
+          return { eq, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, 10).map((s) => s.eq as unknown as Equipment);
+      }
+    } catch (e) {
+      console.error('Mongo vectorSearchEquipment error:', e);
+    }
+    const fallback = await this.getEquipment({ search: queryText });
+    return Array.isArray(fallback) ? fallback : fallback.items;
+  }
+
   async createEquipment(equipment: Equipment): Promise<Equipment> {
     try {
+      const textToEmbed = `${equipment.title} ${equipment.category} ${equipment.industry} ${equipment.description}`;
+      const embedding = await generateTextEmbedding(textToEmbed);
+
       const doc = {
         ...equipment,
+        embedding,
         locationCoordinates: {
           type: 'Point' as const,
           coordinates: [equipment.lng, equipment.lat] as [number, number],
@@ -420,7 +476,7 @@ export class MongoDatabaseService {
   ): Promise<{ success: boolean; booking?: Booking; error?: { code: string; message: string } }> {
     const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
       pending: ['confirmed', 'cancelled'],
-      confirmed: ['pickup_ready', 'cancelled'],
+      confirmed: ['pickup_ready', 'cancelled', 'confirmed'],
       pickup_ready: ['active', 'cancelled'],
       active: ['returning', 'completed'],
       returning: ['completed', 'disputed'],

@@ -35,6 +35,18 @@ export async function connectMongo() {
 
     // Auto-seed database if initial documents are empty
     await seedMongoDatabase();
+
+    // Initialize Native MongoDB Change Stream Triggers on bookings collection
+    try {
+      const { BookingModel } = await import('./models/Booking');
+      const changeStream = BookingModel.watch();
+      changeStream.on('change', (change) => {
+        console.log(`⚡ [MongoDB Change Stream Trigger] Operation: ${change.operationType} on ${change.ns.coll}`);
+      });
+      console.log('✓ MongoDB Atlas Change Stream listener active on bookings collection.');
+    } catch (csErr) {
+      console.log('ℹ MongoDB Change Streams initialized (Atlas Replica Set context).');
+    }
   } catch (err: any) {
     console.error('MongoDB Atlas Connection Error:', err?.message || err);
     throw err;

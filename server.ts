@@ -618,6 +618,50 @@ async function startServer() {
     }
   });
 
+  app.post('/api/ai/vector-search', async (req, res) => {
+    const { query } = req.body;
+    if (!query) return sendError(res, 'VALIDATION_ERROR', 'Search query string is required.');
+
+    try {
+      const results = await db.vectorSearchEquipment(query);
+      sendSuccess(res, {
+        query,
+        searchType: 'MongoDB Atlas $vectorSearch + Cosine Similarity',
+        count: results.length,
+        equipment: results,
+      });
+    } catch (e: any) {
+      sendError(res, 'VECTOR_SEARCH_ERROR', e?.message || 'Vector search failed.');
+    }
+  });
+
+  // --- STRIPE WEBHOOK PAYMENT STATE ROUTER ---
+  app.post('/api/webhooks/stripe', async (req, res) => {
+    const { type, data } = req.body;
+
+    if (!type || !data?.object) {
+      return sendError(res, 'BAD_REQUEST', 'Invalid Stripe webhook payload structure.');
+    }
+
+    const paymentIntent = data.object;
+    const bookingId = paymentIntent.metadata?.bookingId || paymentIntent.description || paymentIntent.id;
+
+    console.log(`💳 [Stripe Webhook Router] Processing event ${type} for booking ${bookingId}`);
+
+    if (type === 'payment_intent.succeeded' && bookingId) {
+      const updated = await db.updateBookingStatus(bookingId, 'confirmed');
+      if (updated.booking) {
+        await db.logAudit('system', 'Stripe Webhook', 'PAYMENT_SUCCEEDED', bookingId, `Amount: $${(paymentIntent.amount || 0) / 100}`);
+        broadcastSseEvent('PAYMENT_RECEIVED', updated.booking);
+      }
+    } else if (type === 'payment_intent.payment_failed' && bookingId) {
+      await db.updateBookingStatus(bookingId, 'cancelled');
+      await db.logAudit('system', 'Stripe Webhook', 'PAYMENT_FAILED', bookingId);
+    }
+
+    sendSuccess(res, { received: true, eventType: type });
+  });
+
   app.post('/api/ai/recommend-pricing', authenticate, requireRole('owner', 'admin'), async (req: AuthenticatedRequest, res) => {
     const { equipmentId } = req.body;
     const equipment = await db.getEquipmentById(equipmentId);

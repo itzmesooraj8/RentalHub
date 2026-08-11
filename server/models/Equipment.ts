@@ -6,6 +6,7 @@ export interface IEquipmentMongo extends EquipmentType {
     type: 'Point';
     coordinates: [number, number]; // [lng, lat]
   };
+  embedding?: number[];
 }
 
 const EquipmentSchema = new Schema<IEquipmentMongo>(
@@ -41,6 +42,7 @@ const EquipmentSchema = new Schema<IEquipmentMongo>(
     dailyRate: { type: Number, required: true, index: true },
     weeklyRate: { type: Number, required: true },
     securityDeposit: { type: Number, required: true },
+    embedding: { type: [Number], default: [] },
 
     rating: { type: Number, default: 5.0 },
     reviewCount: { type: Number, default: 0 },

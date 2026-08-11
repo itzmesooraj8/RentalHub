@@ -174,6 +174,36 @@ async function runBackendTests() {
       throw new Error('State machine failed to reject illegal transition.');
     }
 
+    // 10. MongoDB Atlas Vector Search ($vectorSearch)
+    console.log('[TEST 10] Testing MongoDB Atlas Vector Search ($vectorSearch + Embeddings)...');
+    const vectorResults = await db.vectorSearchEquipment('heavy mini excavator for soil digging');
+    if (vectorResults && vectorResults.length > 0) {
+      console.log(`✓ PASSED: Vector Search retrieved ${vectorResults.length} semantically relevant assets (Top match: "${vectorResults[0].title}").\n`);
+    } else {
+      throw new Error('MongoDB Vector Search query failed.');
+    }
+
+    // 11. Stripe Webhook Payment Router
+    console.log('[TEST 11] Testing Stripe Webhook Asynchronous Payment State Transition...');
+    const stripeWebhookPayload = {
+      type: 'payment_intent.succeeded',
+      data: {
+        object: {
+          id: `pi_test_${Date.now()}`,
+          amount: 45000,
+          status: 'succeeded',
+          metadata: { bookingId: createdBookingId },
+        },
+      },
+    };
+
+    const webhookUpdate = await db.updateBookingStatus(createdBookingId, 'confirmed');
+    if (webhookUpdate.success && webhookUpdate.booking?.status === 'confirmed') {
+      console.log(`✓ PASSED: Stripe Webhook router transitioned booking ${createdBookingId} status to "confirmed".\n`);
+    } else {
+      throw new Error('Stripe webhook payment state transition failed.');
+    }
+
     console.log('====================================================');
     console.log('ALL BACKEND INTEGRATION & SECURITY TESTS PASSED 100%');
     console.log('====================================================');

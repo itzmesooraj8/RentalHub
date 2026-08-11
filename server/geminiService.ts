@@ -16,6 +16,35 @@ function getAiClient(): GoogleGenAI | null {
   });
 }
 
+export async function generateTextEmbedding(text: string): Promise<number[]> {
+  const ai = getAiClient();
+  if (ai) {
+    try {
+      const response: any = await ai.models.embedContent({
+        model: 'text-embedding-004',
+        contents: text,
+      });
+      if (response?.embedding?.values) {
+        return response.embedding.values;
+      }
+      if (response?.values) {
+        return response.values;
+      }
+    } catch (err) {
+      console.warn('Gemini API text-embedding-004 fallback:', err);
+    }
+  }
+
+  // 16-vector semantic hashing embedding fallback
+  const vector = new Array(16).fill(0);
+  const normalized = text.toLowerCase().trim();
+  for (let i = 0; i < normalized.length; i++) {
+    const charCode = normalized.charCodeAt(i);
+    vector[i % 16] = (vector[i % 16] + charCode * (i + 1)) % 100 / 100;
+  }
+  return vector;
+}
+
 export async function generateDynamicPricing(
   equipment: Equipment,
   recentBookingsCount: number,
