@@ -126,7 +126,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#222222] hover:border-[#F27D26]/50 transition shadow-md"
           >
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#666666]">Fleet Revenue</span>
-            <div className="text-2xl font-serif italic font-bold text-emerald-400 mt-1">${analytics.totalRevenue}</div>
+            <div className="text-2xl font-serif italic font-bold text-emerald-400 mt-1">₹{analytics.totalRevenue}</div>
             <span className="text-[10px] text-[#F27D26] font-bold flex items-center gap-1 mt-1">
               <span>View Analytics</span>
               <ChevronRight className="w-3 h-3" />
@@ -155,15 +155,22 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           {equipmentList.slice(0, 3).map((eq) => (
             <div key={eq.id} className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#262626] space-y-3">
               <div className="aspect-16/9 rounded-xl overflow-hidden bg-[#0A0A0A]">
-                <img src={eq.images[0]} alt={eq.title} className="w-full h-full object-cover" />
+                <img
+                  src={eq.images[0]}
+                  alt={eq.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+                  }}
+                />
               </div>
               <div>
                 <Link to={ROUTES.ownerEquipmentDetail(eq.id)} className="font-serif italic text-white text-base hover:text-[#F27D26] transition">
                   {eq.title}
                 </Link>
                 <div className="flex justify-between text-[#888888] mt-1">
-                  <span>Rate: <strong className="text-white">${eq.dailyRate}/d</strong></span>
-                  <span>Deposit: <strong className="text-[#F27D26]">${eq.securityDeposit}</strong></span>
+                  <span>Rate: <strong className="text-white">₹{eq.dailyRate}/d</strong></span>
+                  <span>Deposit: <strong className="text-[#F27D26]">₹{eq.securityDeposit}</strong></span>
                 </div>
               </div>
             </div>
@@ -197,7 +204,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   <div className="font-serif italic text-white text-sm">{b.equipmentTitle}</div>
                   <div className="text-[11px] text-[#888888]">Renter: {b.customerName} • {b.startDate} to {b.endDate}</div>
                 </div>
-                <div className="font-bold text-[#F27D26] text-sm">${b.priceBreakdown.total}</div>
+                <div className="font-bold text-[#F27D26] text-sm">₹{b.priceBreakdown.total}</div>
               </div>
             ))}
           </div>

@@ -169,7 +169,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ equi
         {calculatedDays > 0 ? (
           <div className="text-right text-xs font-bold text-emerald-400 flex items-center gap-1">
             <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{calculatedDays} Days Selected (${estimatedSubtotal} Subtotal)</span>
+            <span>{calculatedDays} Days Selected (₹{estimatedSubtotal} Subtotal)</span>
           </div>
         ) : (
           <span className="italic text-[#666666]">Click start and end date to select duration</span>

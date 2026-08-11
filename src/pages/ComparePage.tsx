@@ -142,15 +142,15 @@ export const ComparePage: React.FC = () => {
                     <div className="space-y-3 pt-4 border-t border-[#222222] font-mono text-xs">
                       <div className="flex justify-between py-1 border-b border-[#1A1A1A]">
                         <span className="text-slate-400">Daily Rate:</span>
-                        <span className="font-bold text-[#F27D26]">${item.dailyRate}/day</span>
+                        <span className="font-bold text-[#F27D26]">₹{item.dailyRate}/day</span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[#1A1A1A]">
                         <span className="text-slate-400">Weekly Rate:</span>
-                        <span className="font-bold text-white">${item.weeklyRate}/wk</span>
+                        <span className="font-bold text-white">₹{item.weeklyRate}/wk</span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[#1A1A1A]">
                         <span className="text-slate-400">Security Deposit:</span>
-                        <span className="font-bold text-white">${item.securityDeposit}</span>
+                        <span className="font-bold text-white">₹{item.securityDeposit}</span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[#1A1A1A]">
                         <span className="text-slate-400">Owner Trust Score:</span>
@@ -161,7 +161,7 @@ export const ComparePage: React.FC = () => {
                       <div className="flex justify-between py-1 border-b border-[#1A1A1A]">
                         <span className="text-slate-400">Delivery Option:</span>
                         <span className="font-bold text-slate-200 flex items-center gap-1">
-                          <Truck className="w-3.5 h-3.5 text-[#F27D26]" /> Standard $45
+                          <Truck className="w-3.5 h-3.5 text-[#F27D26]" /> Standard ₹45
                         </span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[#1A1A1A]">

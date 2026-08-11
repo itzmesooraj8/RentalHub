@@ -176,7 +176,7 @@ Provide output in valid JSON format with keys:
         <div className="p-3 bg-[#1A1A1A] rounded-2xl border border-[#222222] flex items-center justify-between text-xs">
           <div>
             <span className="text-[#888888] block text-[10px] uppercase tracking-wider">Current Base Rate</span>
-            <span className="text-white font-bold text-sm">${equipment.dailyRate} / day</span>
+            <span className="text-white font-bold text-sm">₹{equipment.dailyRate} / day</span>
           </div>
           <div className="text-right">
             <span className="text-[#888888] block text-[10px] uppercase tracking-wider">Category</span>
@@ -248,7 +248,7 @@ Provide output in valid JSON format with keys:
                   </span>
                   <div className="flex items-center gap-1 text-emerald-400 font-bold text-sm">
                     <TrendingUp className="w-4 h-4" />
-                    <span>Suggested: ${aiRecommendation.suggestedRate}/day</span>
+                    <span>Suggested: ₹{aiRecommendation.suggestedRate}/day</span>
                   </div>
                 </div>
 
@@ -268,7 +268,7 @@ Provide output in valid JSON format with keys:
                   className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Apply Recommended Rate (${aiRecommendation.suggestedRate}/d)</span>
+                  <span>Apply Recommended Rate (₹{aiRecommendation.suggestedRate}/d)</span>
                 </button>
               </div>
             )}

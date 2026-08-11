@@ -62,6 +62,9 @@ export const EquipmentDetailPage: React.FC<EquipmentDetailPageProps> = ({
                 src={equipment.images[activeImgIndex] || equipment.images[0]}
                 alt={equipment.title}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+                }}
               />
               <span className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-[#0A0A0A]/90 backdrop-blur-md text-[#F27D26] text-xs font-bold uppercase tracking-wider border border-[#333333]">
                 {equipment.category}
@@ -88,7 +91,14 @@ export const EquipmentDetailPage: React.FC<EquipmentDetailPageProps> = ({
                       activeImgIndex === idx ? 'border-[#F27D26] ring-2 ring-[#F27D26]/40' : 'border-[#1F1F1F] opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt="Thumbnail" className="w-full h-full object-cover" />
+                    <img
+                      src={img}
+                      alt="Thumbnail"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+                      }}
+                    />
                   </button>
                 ))}
               </div>
@@ -179,7 +189,7 @@ export const EquipmentDetailPage: React.FC<EquipmentDetailPageProps> = ({
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-[#888888] uppercase tracking-wider">Daily Rate</span>
               <div className="text-right">
-                <span className="text-2xl font-serif italic text-[#F27D26] font-bold">${equipment.dailyRate}</span>
+                <span className="text-2xl font-serif italic text-[#F27D26] font-bold">₹{equipment.dailyRate}</span>
                 <span className="text-xs text-[#888888]"> / day</span>
               </div>
             </div>
@@ -187,11 +197,11 @@ export const EquipmentDetailPage: React.FC<EquipmentDetailPageProps> = ({
             <div className="p-3 bg-[#1A1A1A] rounded-xl border border-[#222222] text-xs text-[#888888] space-y-1.5">
               <div className="flex justify-between">
                 <span>Weekly Discounted Rate:</span>
-                <span className="text-white font-bold">${equipment.weeklyRate}/wk</span>
+                <span className="text-white font-bold">₹{equipment.weeklyRate}/wk</span>
               </div>
               <div className="flex justify-between">
                 <span>Security Deposit Hold:</span>
-                <span className="text-[#F27D26] font-bold">${equipment.securityDeposit}</span>
+                <span className="text-[#F27D26] font-bold">₹{equipment.securityDeposit}</span>
               </div>
             </div>
 

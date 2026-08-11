@@ -172,7 +172,7 @@ export const BookingFlowPage: React.FC<BookingFlowPageProps> = ({
               >
                 <Truck className="w-5 h-5 text-[#F27D26] mb-2" />
                 <div className="font-bold text-white uppercase tracking-wider">Job Site Delivery</div>
-                <div className="text-[10px] text-[#888888] mt-0.5">Heavy transport flatbed dispatch (+$45)</div>
+                <div className="text-[10px] text-[#888888] mt-0.5">Heavy transport flatbed dispatch (+₹45)</div>
               </button>
 
               <button
@@ -186,7 +186,7 @@ export const BookingFlowPage: React.FC<BookingFlowPageProps> = ({
               >
                 <Store className="w-5 h-5 text-[#F27D26] mb-2" />
                 <div className="font-bold text-white uppercase tracking-wider">Depot Self Pickup</div>
-                <div className="text-[10px] text-[#888888] mt-0.5">Pickup at regional yard depot ($0)</div>
+                <div className="text-[10px] text-[#888888] mt-0.5">Pickup at regional yard depot (₹0)</div>
               </button>
             </div>
 
@@ -211,30 +211,30 @@ export const BookingFlowPage: React.FC<BookingFlowPageProps> = ({
 
           <div className="space-y-2 text-[#888888]">
             <div className="flex justify-between">
-              <span>Rental ({rentalDays} d @ ${equipment.dailyRate}/d):</span>
-              <span className="text-white font-bold">${subtotal}</span>
+              <span>Rental ({rentalDays} d @ ₹{equipment.dailyRate}/d):</span>
+              <span className="text-white font-bold">₹{subtotal}</span>
             </div>
             <div className="flex justify-between">
               <span>Logistics Delivery Fee:</span>
-              <span className="text-white font-bold">${deliveryFee}</span>
+              <span className="text-white font-bold">₹{deliveryFee}</span>
             </div>
             <div className="flex justify-between">
               <span>Platform & Protection Fee:</span>
-              <span className="text-white font-bold">${platformFee}</span>
+              <span className="text-white font-bold">₹{platformFee}</span>
             </div>
             <div className="flex justify-between">
               <span>Job Protection Guarantee:</span>
-              <span className="text-white font-bold">${insuranceFee}</span>
+              <span className="text-white font-bold">₹{insuranceFee}</span>
             </div>
             <div className="flex justify-between text-[#F27D26]">
               <span>Refundable Deposit Hold:</span>
-              <span className="font-bold">${securityDeposit}</span>
+              <span className="font-bold">₹{securityDeposit}</span>
             </div>
           </div>
 
           <div className="pt-3 border-t border-[#1F1F1F] flex justify-between text-sm font-bold text-white">
             <span>Total Pre-Authorized:</span>
-            <span className="text-lg font-serif italic text-[#F27D26]">${totalCharge}</span>
+            <span className="text-lg font-serif italic text-[#F27D26]">₹{totalCharge}</span>
           </div>
 
           <button

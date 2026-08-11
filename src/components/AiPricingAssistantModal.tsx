@@ -78,14 +78,14 @@ export const AiPricingAssistantModal: React.FC<AiPricingAssistantModalProps> = (
             <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="p-3 bg-white rounded-xl border border-slate-200/80">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current Rate</span>
-                <div className="text-xl font-bold text-slate-800">${suggestion.currentRate}/day</div>
+                <div className="text-xl font-bold text-slate-800">₹{suggestion.currentRate}/day</div>
               </div>
 
               <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 relative overflow-hidden">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-emerald-600" /> AI Suggested
                 </span>
-                <div className="text-2xl font-black text-emerald-600">${suggestion.suggestedRate}/day</div>
+                <div className="text-2xl font-black text-emerald-600">₹{suggestion.suggestedRate}/day</div>
                 <div className="text-[10px] font-bold text-emerald-800 mt-0.5">
                   +{suggestion.projectedRevenueIncreasePct}% projected revenue
                 </div>
@@ -135,7 +135,7 @@ export const AiPricingAssistantModal: React.FC<AiPricingAssistantModalProps> = (
                 className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <DollarSign className="w-4 h-4" />
-                Apply Suggested Rate (${suggestion.suggestedRate}/day)
+                Apply Suggested Rate (₹{suggestion.suggestedRate}/day)
               </button>
             </div>
           </div>

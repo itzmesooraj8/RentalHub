@@ -186,6 +186,9 @@ export const OwnerEquipmentPage: React.FC<OwnerEquipmentPageProps> = ({
                           src={item.images[0]}
                           alt={item.title}
                           className="w-12 h-12 rounded-xl object-cover border border-[#333333] shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+                          }}
                         />
                         <div>
                           <Link
@@ -199,7 +202,7 @@ export const OwnerEquipmentPage: React.FC<OwnerEquipmentPageProps> = ({
                       </div>
                     </td>
                     <td className="p-4 text-[#AAAAAA]">{item.category}</td>
-                    <td className="p-4 font-bold text-[#F27D26]">${item.dailyRate}/d</td>
+                    <td className="p-4 font-bold text-[#F27D26]">₹{item.dailyRate}/d</td>
                     <td className="p-4">
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase">
                         {item.status || 'Active'}

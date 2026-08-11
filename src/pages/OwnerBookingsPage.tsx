@@ -118,6 +118,9 @@ export const OwnerBookingsPage: React.FC<OwnerBookingsPageProps> = ({
                     src={b.equipmentImage}
                     alt={b.equipmentTitle}
                     className="w-16 h-16 rounded-2xl object-cover border border-[#333333] shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+                    }}
                   />
                   <div>
                     <div className="flex items-center gap-2">
@@ -138,8 +141,8 @@ export const OwnerBookingsPage: React.FC<OwnerBookingsPageProps> = ({
                 </div>
 
                 <div className="text-right">
-                  <div className="text-2xl font-serif italic font-bold text-[#F27D26]">${b.priceBreakdown.total}</div>
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase">Payout Subtotal: ${b.priceBreakdown.subtotal}</span>
+                  <div className="text-2xl font-serif italic font-bold text-[#F27D26]">₹{b.priceBreakdown.total}</div>
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase">Payout Subtotal: ₹{b.priceBreakdown.subtotal}</span>
                 </div>
               </div>
 

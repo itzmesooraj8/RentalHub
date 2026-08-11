@@ -42,30 +42,49 @@ export const OwnerAnalyticsPage: React.FC<OwnerAnalyticsPageProps> = ({
   const [analyticsData, setAnalyticsData] = useState<OwnerAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const defaultAnalytics: OwnerAnalytics = {
+    totalRevenue: 0,
+    monthlyRevenue: [
+      { month: 'May', revenue: 0, bookingsCount: 0 },
+      { month: 'Jun', revenue: 0, bookingsCount: 0 },
+      { month: 'Jul', revenue: 0, bookingsCount: 0 },
+      { month: 'Aug', revenue: 0, bookingsCount: 0 },
+    ],
+    utilizationRatePct: 0,
+    idleCostEstimate: 0,
+    totalBookings: 0,
+    activeEquipmentCount: equipmentList.length || 0,
+    topPerformingEquipment: [],
+    totalCo2SavedKg: 0,
+  };
+
   useEffect(() => {
     const ownerId = currentUser?.id || 'usr_owner_1';
     analyticsService
       .getOwnerAnalytics(ownerId)
       .then((data) => {
-        setAnalyticsData(data);
+        setAnalyticsData(data || defaultAnalytics);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Failed to load owner analytics:', err);
+        setAnalyticsData(defaultAnalytics);
         setLoading(false);
       });
   }, [currentUser]);
 
   const COLORS = ['#F27D26', '#38bdf8', '#34d399', '#a78bfa'];
 
-  if (loading || !analyticsData) {
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center text-slate-400">
-        <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div className="animate-spin w-8 h-8 border-2 border-[#F27D26] border-t-transparent rounded-full mx-auto mb-4"></div>
         Executing MongoDB aggregation pipeline for owner revenue & utilization...
       </div>
     );
   }
+
+  const activeAnalytics = analyticsData || defaultAnalytics;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -94,7 +113,7 @@ export const OwnerAnalyticsPage: React.FC<OwnerAnalyticsPageProps> = ({
             <DollarSign className="w-5 h-5 text-emerald-400" />
           </div>
           <p className="text-2xl font-bold text-slate-100 font-mono">
-            ${analyticsData.totalRevenue.toLocaleString()}
+            ₹{activeAnalytics.totalRevenue.toLocaleString()}
           </p>
           <p className="text-xs text-emerald-400 mt-2 flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5" />
@@ -108,12 +127,12 @@ export const OwnerAnalyticsPage: React.FC<OwnerAnalyticsPageProps> = ({
             <Activity className="w-5 h-5 text-amber-400" />
           </div>
           <p className="text-2xl font-bold text-slate-100 font-mono">
-            {analyticsData.utilizationRatePct}%
+            {activeAnalytics.utilizationRatePct}%
           </p>
           <div className="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
             <div
               className="bg-amber-500 h-full rounded-full"
-              style={{ width: `${analyticsData.utilizationRatePct}%` }}
+              style={{ width: `${activeAnalytics.utilizationRatePct}%` }}
             ></div>
           </div>
         </div>
@@ -124,10 +143,10 @@ export const OwnerAnalyticsPage: React.FC<OwnerAnalyticsPageProps> = ({
             <Layers className="w-5 h-5 text-sky-400" />
           </div>
           <p className="text-2xl font-bold text-slate-100 font-mono">
-            {analyticsData.activeEquipmentCount} Units
+            {activeAnalytics.activeEquipmentCount} Units
           </p>
           <p className="text-xs text-slate-400 mt-2">
-            {analyticsData.totalBookings} Total Reservations
+            {activeAnalytics.totalBookings} Total Reservations
           </p>
         </div>
 
@@ -137,7 +156,7 @@ export const OwnerAnalyticsPage: React.FC<OwnerAnalyticsPageProps> = ({
             <Leaf className="w-5 h-5 text-emerald-400" />
           </div>
           <p className="text-2xl font-bold text-slate-100 font-mono">
-            {analyticsData.totalCo2SavedKg} kg
+            {activeAnalytics.totalCo2SavedKg} kg
           </p>
           <p className="text-xs text-emerald-400 mt-2">
             Circular economy impact
@@ -153,7 +172,7 @@ export const OwnerAnalyticsPage: React.FC<OwnerAnalyticsPageProps> = ({
         </h2>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={analyticsData.monthlyRevenue}>
+            <AreaChart data={activeAnalytics.monthlyRevenue}>
               <defs>
                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#F27D26" stopOpacity={0.4} />

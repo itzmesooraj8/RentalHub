@@ -169,7 +169,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
 
         <div className="text-right border-t md:border-t-0 pt-4 md:pt-0 border-[#1F1F1F]">
           <span className="text-3xl font-serif italic font-bold text-[#F27D26]">
-            ${booking.priceBreakdown.total}
+            ₹{booking.priceBreakdown.total}
           </span>
           <span className="block text-[10px] text-emerald-400 uppercase font-bold mt-0.5">
             Status: {booking.status.replace('_', ' ').toUpperCase()}
@@ -306,25 +306,25 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
 
             <div className="space-y-2 text-[#AAAAAA]">
               <div className="flex justify-between">
-                <span>Daily Rate (${booking.priceBreakdown.dailyRate} x {booking.priceBreakdown.rentalDays}d)</span>
-                <span className="text-white font-bold">${booking.priceBreakdown.subtotal}</span>
+                <span>Daily Rate (₹{booking.priceBreakdown.dailyRate} x {booking.priceBreakdown.rentalDays}d)</span>
+                <span className="text-white font-bold">₹{booking.priceBreakdown.subtotal}</span>
               </div>
               <div className="flex justify-between">
                 <span>Security Deposit (Refundable)</span>
-                <span className="text-white font-bold">${booking.priceBreakdown.securityDeposit}</span>
+                <span className="text-white font-bold">₹{booking.priceBreakdown.securityDeposit}</span>
               </div>
               <div className="flex justify-between">
                 <span>Platform Service Fee</span>
-                <span className="text-white font-bold">${booking.priceBreakdown.platformFee}</span>
+                <span className="text-white font-bold">₹{booking.priceBreakdown.platformFee}</span>
               </div>
               <div className="flex justify-between">
                 <span>Equipment Insurance Protection</span>
-                <span className="text-white font-bold">${booking.priceBreakdown.insuranceFee}</span>
+                <span className="text-white font-bold">₹{booking.priceBreakdown.insuranceFee}</span>
               </div>
 
               <div className="border-t border-[#222222] pt-3 flex justify-between text-sm font-bold text-white">
                 <span>Total Charge</span>
-                <span className="text-[#F27D26]">${booking.priceBreakdown.total}</span>
+                <span className="text-[#F27D26]">₹{booking.priceBreakdown.total}</span>
               </div>
             </div>
 
@@ -333,7 +333,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
                 <Lock className="w-3 h-3" />
                 <span>Security Deposit Authorization Hold</span>
               </div>
-              <p>The ${booking.priceBreakdown.securityDeposit} deposit hold is released automatically upon return inspection confirmation.</p>
+              <p>The ₹{booking.priceBreakdown.securityDeposit} deposit hold is released automatically upon return inspection confirmation.</p>
             </div>
           </div>
 

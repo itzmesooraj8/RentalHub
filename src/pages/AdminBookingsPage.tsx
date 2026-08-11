@@ -109,7 +109,7 @@ export const AdminBookingsPage: React.FC<AdminBookingsPageProps> = ({ bookings }
                   <td className="p-4 text-[#AAAAAA]">{b.customerName}</td>
                   <td className="p-4 text-[#AAAAAA]">{b.ownerName}</td>
                   <td className="p-4 text-[#666666]">{b.startDate} → {b.endDate}</td>
-                  <td className="p-4 font-bold text-white">${b.priceBreakdown.total}</td>
+                  <td className="p-4 font-bold text-white">₹{b.priceBreakdown.total}</td>
                   <td className="p-4">
                     <span className="px-2.5 py-0.5 rounded-full bg-[#1A1A1A] border border-[#333] text-[#F27D26] text-[10px] font-bold uppercase">
                       {b.status.replace('_', ' ')}

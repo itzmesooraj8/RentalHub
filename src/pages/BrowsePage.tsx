@@ -189,7 +189,7 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({
         <div>
           <div className="flex justify-between text-[10px] text-[#666666] font-bold uppercase tracking-wider mb-1">
             <span>Max Daily Rate</span>
-            <span className="text-[#F27D26]">${maxRate}/day</span>
+            <span className="text-[#F27D26]">₹{maxRate}/day</span>
           </div>
           <input
             type="range"

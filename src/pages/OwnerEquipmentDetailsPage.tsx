@@ -96,6 +96,9 @@ export const OwnerEquipmentDetailsPage: React.FC<OwnerEquipmentDetailsPageProps>
               src={equipment.images[0]}
               alt={equipment.title}
               className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border border-[#333333] shrink-0"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+              }}
             />
             <div>
               <div className="flex items-center gap-2">
@@ -135,7 +138,7 @@ export const OwnerEquipmentDetailsPage: React.FC<OwnerEquipmentDetailsPageProps>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
           <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#222222]">
             <span className="text-[10px] font-bold uppercase text-[#666666]">Total Generated Revenue</span>
-            <div className="text-2xl font-serif italic font-bold text-[#F27D26] mt-1">${totalRevenue}</div>
+            <div className="text-2xl font-serif italic font-bold text-[#F27D26] mt-1">₹{totalRevenue}</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#222222]">
@@ -150,7 +153,7 @@ export const OwnerEquipmentDetailsPage: React.FC<OwnerEquipmentDetailsPageProps>
 
           <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#222222]">
             <span className="text-[10px] font-bold uppercase text-[#666666]">Daily Rental Rate</span>
-            <div className="text-2xl font-serif italic font-bold text-emerald-400 mt-1">${equipment.dailyRate}</div>
+            <div className="text-2xl font-serif italic font-bold text-emerald-400 mt-1">₹{equipment.dailyRate}</div>
           </div>
         </div>
       </div>

@@ -148,11 +148,18 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#222222] flex flex-col sm:flex-row items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3">
-                  <img src={b.equipmentImage} alt={b.equipmentTitle} className="w-12 h-12 rounded-xl object-cover" />
+                  <img
+                    src={b.equipmentImage}
+                    alt={b.equipmentTitle}
+                    className="w-12 h-12 rounded-xl object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+                    }}
+                  />
                   <div>
                     <span className="font-serif italic text-white text-base">{b.equipmentTitle}</span>
                     <div className="text-[11px] text-[#888888]">
-                      {b.startDate} to {b.endDate} • ${b.priceBreakdown.total}
+                      {b.startDate} to {b.endDate} • ₹{b.priceBreakdown.total}
                     </div>
                   </div>
                 </div>

@@ -86,11 +86,11 @@ export const AdminAnalyticsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Gross Volume (GMV)</span>
+            <span className="text-xs font-medium uppercase tracking-wider">Gross Transaction Volume (GMV)</span>
             <DollarSign className="w-5 h-5 text-indigo-400" />
           </div>
           <p className="text-2xl font-bold text-slate-100 font-mono">
-            ${analytics.grossTransactionVolume.toLocaleString()}
+            ₹{analytics.grossTransactionVolume.toLocaleString()}
           </p>
           <p className="text-xs text-indigo-400 mt-2 flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5" />
@@ -104,7 +104,7 @@ export const AdminAnalyticsPage: React.FC = () => {
             <ShieldCheck className="w-5 h-5 text-emerald-400" />
           </div>
           <p className="text-2xl font-bold text-slate-100 font-mono">
-            ${analytics.platformFeesEarned.toLocaleString()}
+            ₹{analytics.platformFeesEarned.toLocaleString()}
           </p>
           <p className="text-xs text-emerald-400 mt-2">
             Net 10% platform fee margin

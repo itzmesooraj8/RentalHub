@@ -56,7 +56,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-sans">
           <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#222222]">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#666666] font-mono">Processed GMV Volume</span>
-            <div className="text-2xl font-serif italic font-bold text-[#F27D26] mt-1">${totalVolume}</div>
+            <div className="text-2xl font-serif italic font-bold text-[#F27D26] mt-1">₹{totalVolume}</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#222222]">

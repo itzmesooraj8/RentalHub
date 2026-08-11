@@ -71,20 +71,20 @@ export const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
             <span className="font-semibold text-white">{priceBreakdown.rentalDays} days</span>
           </div>
           <div className="flex justify-between text-[#888888]">
-            <span>Subtotal (${priceBreakdown.dailyRate}/day):</span>
-            <span className="font-semibold text-white">${priceBreakdown.subtotal}</span>
+            <span>Subtotal (₹{priceBreakdown.dailyRate}/day):</span>
+            <span className="font-semibold text-white">₹{priceBreakdown.subtotal}</span>
           </div>
           <div className="flex justify-between text-[#888888]">
             <span>Security Deposit Hold (Refundable):</span>
-            <span className="font-semibold text-[#F27D26]">${priceBreakdown.securityDeposit}</span>
+            <span className="font-semibold text-[#F27D26]">₹{priceBreakdown.securityDeposit}</span>
           </div>
           <div className="flex justify-between text-[#888888]">
             <span>Platform Service & Protection Fee:</span>
-            <span className="font-semibold text-white">${priceBreakdown.platformFee + priceBreakdown.insuranceFee}</span>
+            <span className="font-semibold text-white">₹{priceBreakdown.platformFee + priceBreakdown.insuranceFee}</span>
           </div>
           <div className="pt-2 border-t border-[#333333] flex justify-between text-sm font-bold text-white">
             <span>Total Charge:</span>
-            <span className="text-[#F27D26] text-base font-serif italic">${priceBreakdown.total}</span>
+            <span className="text-[#F27D26] text-base font-serif italic">₹{priceBreakdown.total}</span>
           </div>
         </div>
 
@@ -150,7 +150,7 @@ export const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
           <div className="p-3 rounded-xl bg-[#1A1A1A] border border-[#333333] text-[10px] font-mono text-[#888888] flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-[#F27D26] shrink-0 mt-0.5" />
             <span>
-              The <strong className="text-white">${priceBreakdown.securityDeposit} security deposit</strong> will be placed as an authorization hold and released automatically upon safe return.
+              The <strong className="text-white">₹{priceBreakdown.securityDeposit} security deposit</strong> will be placed as an authorization hold and released automatically upon safe return.
             </span>
           </div>
 
@@ -167,7 +167,7 @@ export const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
             ) : (
               <span className="flex items-center gap-2 font-mono">
                 <Lock className="w-4 h-4" />
-                Authorize ${priceBreakdown.total} & Lock Equipment
+                Authorize ₹{priceBreakdown.total} & Lock Equipment
               </span>
             )}
           </button>

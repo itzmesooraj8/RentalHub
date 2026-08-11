@@ -381,7 +381,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     lat: 37.7833,
     lng: -122.4167,
     images: [
-      'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=1000',
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000'
     ],
     specs: {

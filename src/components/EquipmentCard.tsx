@@ -24,6 +24,9 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
             src={equipment.images[0]}
             alt={equipment.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+            }}
           />
           <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#0A0A0A]/90 backdrop-blur-md text-[#F27D26] text-[10px] font-mono font-bold uppercase tracking-wider border border-[#333333]">
             {equipment.category}
@@ -48,7 +51,7 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
             <TrustScoreBadge score={equipment.ownerTrustScore} kycVerified={equipment.ownerKyVerified} />
             <span className="px-2 py-1 rounded bg-[#0A0A0A]/90 text-emerald-400 font-mono text-[10px] font-bold border border-[#333333]">
-              -{equipment.co2SavedPerDayKg}kg CO₂/d
+              -{Number(equipment.co2SavedPerDayKg || 0).toFixed(1)}kg CO₂/d
             </span>
           </div>
         </div>
@@ -78,10 +81,10 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
       <div className="p-4 pt-3 border-t border-[#1F1F1F] bg-[#141414] flex items-center justify-between rounded-b-3xl">
         <div>
           <div className="flex items-baseline gap-1 font-mono">
-            <span className="text-xl font-serif italic font-bold text-white">${equipment.dailyRate}</span>
+            <span className="text-xl font-serif italic font-bold text-white">₹{equipment.dailyRate}</span>
             <span className="text-xs text-[#888888]">/ day</span>
           </div>
-          <span className="text-[10px] text-[#666666] font-mono">Deposit: ${equipment.securityDeposit}</span>
+          <span className="text-[10px] text-[#666666] font-mono">Deposit: ₹{equipment.securityDeposit}</span>
         </div>
 
         <Link

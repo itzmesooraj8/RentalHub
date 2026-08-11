@@ -61,7 +61,7 @@ export const EquipmentMap: React.FC<EquipmentMapProps> = ({ items }) => {
                   : 'bg-[#111111] hover:bg-[#1A1A1A] text-white border-[#333333] hover:scale-105'
               }`}>
                 <MapPin className="w-3.5 h-3.5" />
-                <span>${eq.dailyRate}/d</span>
+                <span>₹{eq.dailyRate}/d</span>
               </div>
             </div>
           );
@@ -82,6 +82,9 @@ export const EquipmentMap: React.FC<EquipmentMapProps> = ({ items }) => {
               src={selectedPin.images[0]}
               alt={selectedPin.title}
               className="w-20 h-20 rounded-xl object-cover border border-[#333333]"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000';
+              }}
             />
             <div className="flex-1 min-w-0">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#F27D26]">
@@ -99,7 +102,7 @@ export const EquipmentMap: React.FC<EquipmentMapProps> = ({ items }) => {
 
           <div className="mt-3 pt-3 border-t border-[#1F1F1F] flex items-center justify-between">
             <div>
-              <span className="text-lg font-serif font-bold text-white">${selectedPin.dailyRate}</span>
+              <span className="text-lg font-serif font-bold text-white">₹{selectedPin.dailyRate}</span>
               <span className="text-xs text-[#888888]"> / day</span>
             </div>
             <Link

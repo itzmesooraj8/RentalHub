@@ -27,7 +27,9 @@ export const EsgImpactCard: React.FC<EsgImpactCardProps> = ({ co2SavedKg, title 
       <div className="grid grid-cols-2 gap-3 pt-2 font-mono">
         <div className="p-3 bg-[#1A1A1A] rounded-xl border border-[#222222]">
           <span className="text-[10px] text-[#666666] uppercase tracking-wider block">CO₂ Emissions Diverted</span>
-          <div className="text-xl font-bold text-emerald-400 mt-0.5">{co2SavedKg} kg CO₂e</div>
+          <div className="text-base sm:text-lg font-bold text-emerald-400 mt-0.5 truncate">
+            {Number(co2SavedKg || 0).toFixed(1)} kg CO₂e
+          </div>
         </div>
 
         <div className="p-3 bg-[#1A1A1A] rounded-xl border border-[#222222]">
