@@ -65,4 +65,14 @@ export const equipmentService = {
     const res = await apiClient.delete<{ success: boolean; data: { success: boolean } }>(`/api/equipment/${id}`);
     return res.data.data.success;
   },
+
+  async getAvailability(equipmentId: string, year?: number, month?: number): Promise<string[]> {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (month) params.append('month', month.toString());
+    const res = await apiClient.get<{ success: boolean; data: { blockedDates: string[] } }>(
+      `/api/equipment/${equipmentId}/availability?${params.toString()}`
+    );
+    return res.data.data.blockedDates;
+  },
 };

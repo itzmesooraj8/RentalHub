@@ -1,21 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle, Lock } from 'lucide-react';
+import { equipmentService } from '../services/equipmentService';
 
 interface AvailabilityCalendarProps {
+  equipmentId?: string;
   onSelectDates?: (startDate: string, endDate: string) => void;
   dailyRate: number;
 }
 
-export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ onSelectDates, dailyRate }) => {
+export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ equipmentId, onSelectDates, dailyRate }) => {
+  const now = new Date();
+  const [currentYear, setCurrentYear] = useState<number>(now.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<number>(now.getMonth() + 1);
+  const [blockedDateStrings, setBlockedDateStrings] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
   const [selectedStart, setSelectedStart] = useState<number | null>(15);
   const [selectedEnd, setSelectedEnd] = useState<number | null>(18);
 
-  const blockedDays = [4, 5, 22, 23, 24]; // Booked days in current month demo
+  useEffect(() => {
+    if (!equipmentId) return;
+    setLoading(true);
+    equipmentService
+      .getAvailability(equipmentId, currentYear, currentMonth)
+      .then((dates) => {
+        setBlockedDateStrings(dates || []);
+      })
+      .catch(() => {
+        setBlockedDateStrings([]);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [equipmentId, currentYear, currentMonth]);
 
-  const daysInAugust = Array.from({ length: 31 }, (_, i) => i + 1);
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const isDayBlocked = (day: number): boolean => {
+    const monthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
+    const dayStr = day < 10 ? `0${day}` : `${day}`;
+    const dateFormatted = `${currentYear}-${monthStr}-${dayStr}`;
+    return blockedDateStrings.includes(dateFormatted);
+  };
 
   const handleDayClick = (day: number) => {
-    if (blockedDays.includes(day)) return;
+    if (isDayBlocked(day)) return;
+
+    const monthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
+    const dayStr = day < 10 ? `0${day}` : `${day}`;
+    const dateFormatted = `${currentYear}-${monthStr}-${dayStr}`;
 
     if (!selectedStart || (selectedStart && selectedEnd)) {
       setSelectedStart(day);
@@ -23,12 +62,36 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ onSe
     } else if (day > selectedStart) {
       setSelectedEnd(day);
       if (onSelectDates) {
-        onSelectDates(`2026-08-${selectedStart < 10 ? '0' + selectedStart : selectedStart}`, `2026-08-${day < 10 ? '0' + day : day}`);
+        const startDayStr = selectedStart < 10 ? `0${selectedStart}` : `${selectedStart}`;
+        const startFormatted = `${currentYear}-${monthStr}-${startDayStr}`;
+        onSelectDates(startFormatted, dateFormatted);
       }
     } else {
       setSelectedStart(day);
       setSelectedEnd(null);
     }
+  };
+
+  const handlePrevMonth = () => {
+    if (currentMonth === 1) {
+      setCurrentMonth(12);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+    setSelectedStart(null);
+    setSelectedEnd(null);
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 12) {
+      setCurrentMonth(1);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+    setSelectedStart(null);
+    setSelectedEnd(null);
   };
 
   const calculatedDays = selectedStart && selectedEnd ? selectedEnd - selectedStart + 1 : 0;
@@ -40,13 +103,20 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ onSe
       <div className="flex items-center justify-between pb-3 border-b border-[#1F1F1F]">
         <div className="flex items-center gap-2 font-serif italic text-lg text-white">
           <CalendarIcon className="w-5 h-5 text-[#F27D26]" />
-          <span>August 2026 Availability</span>
+          <span>{monthNames[currentMonth - 1]} {currentYear} Availability</span>
+          {loading && <span className="text-[10px] font-mono text-amber-400 animate-pulse">(Updating...)</span>}
         </div>
         <div className="flex items-center gap-1">
-          <button className="p-1 rounded-lg bg-[#1A1A1A] hover:bg-[#222222] text-[#888888] hover:text-white cursor-pointer">
+          <button
+            onClick={handlePrevMonth}
+            className="p-1.5 rounded-lg bg-[#1A1A1A] hover:bg-[#222222] text-[#888888] hover:text-white cursor-pointer"
+          >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <button className="p-1 rounded-lg bg-[#1A1A1A] hover:bg-[#222222] text-[#888888] hover:text-white cursor-pointer">
+          <button
+            onClick={handleNextMonth}
+            className="p-1.5 rounded-lg bg-[#1A1A1A] hover:bg-[#222222] text-[#888888] hover:text-white cursor-pointer"
+          >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -59,8 +129,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ onSe
 
       {/* Days Grid */}
       <div className="grid grid-cols-7 gap-1.5 font-mono text-xs">
-        {daysInAugust.map((day) => {
-          const isBlocked = blockedDays.includes(day);
+        {daysArray.map((day) => {
+          const isBlocked = isDayBlocked(day);
           const isStart = selectedStart === day;
           const isEnd = selectedEnd === day;
           const isInRange = selectedStart && selectedEnd && day > selectedStart && day < selectedEnd;
@@ -93,7 +163,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ onSe
       <div className="pt-3 border-t border-[#1F1F1F] flex flex-wrap items-center justify-between text-[10px] font-mono text-[#888888] gap-2">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-[#F27D26]"></span> Selected</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-[#141414] border border-[#333333]"></span> Booked</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-[#141414] border border-[#333333]"></span> MongoDB Reserved</span>
         </div>
 
         {calculatedDays > 0 ? (

@@ -136,6 +136,27 @@ export interface Booking {
   status: BookingStatus;
   paymentStatus?: 'paid' | 'pending' | 'refunded';
   paymentIntentId?: string;
+  pickupTimestamp?: string;
+  returnTimestamp?: string;
+  conditionReportBefore?: {
+    notes?: string;
+    photos?: string[];
+    verifiedBy?: string;
+    timestamp?: string;
+  };
+  conditionReportAfter?: {
+    notes?: string;
+    photos?: string[];
+    verifiedBy?: string;
+    timestamp?: string;
+  };
+  damageReport?: {
+    description?: string;
+    photos?: string[];
+    claimedAmount?: number;
+    reportedBy?: string;
+    timestamp?: string;
+  };
   condition?: ConditionPhotos;
   damagePhotos?: string[];
   beforePhotos?: string[];

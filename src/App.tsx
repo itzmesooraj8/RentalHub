@@ -19,6 +19,7 @@ import { AuthPage } from './pages/AuthPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { FavoritesPage } from './pages/FavoritesPage';
 import { DashboardResolverPage } from './pages/DashboardResolverPage';
+import { ComparePage } from './pages/ComparePage';
 
 // Customer Pages
 import { CustomerDashboard } from './pages/CustomerDashboard';
@@ -111,6 +112,8 @@ function AppRoutes() {
             />
             {/* Redirect /map to /browse?view=map for unified discovery system */}
             <Route path="/map" element={<Navigate to="/browse?view=map" replace />} />
+
+            <Route path="/compare" element={<ComparePage />} />
 
             <Route
               path="/equipment/:id"

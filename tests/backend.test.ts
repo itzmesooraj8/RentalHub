@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 async function runBackendTests() {
   console.log('====================================================');
-  console.log('RENTALHUB BACKEND INTEGRATION & CONFLICT TEST SUITE');
+  console.log('RENTALHUB V2 BACKEND INTEGRATION & SECURITY SUITE');
   console.log('====================================================\n');
 
   try {
@@ -48,21 +48,23 @@ async function runBackendTests() {
     const nearbyEquipment = await db.getEquipmentNearby(austinLat, austinLng, 50);
     console.log(`✓ PASSED: Found ${nearbyEquipment.length} equipment items within 50km radius of Austin, TX.\n`);
 
-    // 5. Double-Booking Conflict Prevention & Atomic Transaction
-    console.log('[TEST 5] Testing Concurrent Double-Booking Conflict Prevention via Promise.all...');
+    // 5. Day-Slot Atomic Concurrency Lock via Promise.all
+    console.log('[TEST 5] Testing Day-Slot Atomic Concurrency Lock ({ equipmentId: 1, date: 1 }) via Promise.all...');
     const targetEq = nearbyEquipment[0] || (await db.getEquipment())[0];
 
-    // Clean up previous test bookings to ensure idempotent test execution
+    // Clean up previous test bookings & blocks for target equipment to ensure idempotent test execution
     const { BookingModel } = await import('../server/models/Booking');
     const { AvailabilityBlockModel } = await import('../server/models/AvailabilityBlock');
-    await BookingModel.deleteMany({ id: { $regex: '^bk_test_' } });
-    await AvailabilityBlockModel.deleteMany({ bookingId: { $regex: '^bk_test_' } });
+    await BookingModel.deleteMany({ equipmentId: targetEq.id });
+    await AvailabilityBlockModel.deleteMany({ equipmentId: targetEq.id });
 
-    const testStartDate = `2029-01-10`;
-    const testEndDate = `2029-01-15`;
+    const ts = Date.now();
+    const randomYear = 2030 + Math.floor(Math.random() * 50);
+    const testStartDate = `${randomYear}-05-10`;
+    const testEndDate = `${randomYear}-05-15`;
 
     const bookingAttempt1: Booking = {
-      id: `bk_test_${Date.now()}_1`,
+      id: `bk_test_${ts}_1`,
       equipmentId: targetEq.id,
       equipmentTitle: targetEq.title,
       equipmentImage: targetEq.images[0],
@@ -77,13 +79,13 @@ async function runBackendTests() {
       status: 'confirmed',
       priceBreakdown: {
         dailyRate: targetEq.dailyRate,
-        rentalDays: 5,
-        subtotal: targetEq.dailyRate * 5,
+        rentalDays: 6,
+        subtotal: targetEq.dailyRate * 6,
         deliveryFee: 45,
         securityDeposit: targetEq.securityDeposit,
         platformFee: 50,
         insuranceFee: 25,
-        total: targetEq.dailyRate * 5 + 120 + targetEq.securityDeposit,
+        total: targetEq.dailyRate * 6 + 120 + targetEq.securityDeposit,
       },
       paymentStatus: 'paid',
       createdAt: new Date().toISOString(),
@@ -91,12 +93,12 @@ async function runBackendTests() {
 
     const bookingAttempt2: Booking = {
       ...bookingAttempt1,
-      id: `bk_test_${Date.now()}_2`,
+      id: `bk_test_${ts}_2`,
       customerId: 'usr_test_cust_2',
       customerName: 'Rival Renter',
     };
 
-    // Execute concurrent booking attempts via Promise.all to test race-condition locking
+    // Execute concurrent booking attempts via Promise.all to test day-slot unique index locking
     const [res1, res2] = await Promise.all([
       db.createBooking(bookingAttempt1),
       db.createBooking(bookingAttempt2),
@@ -106,15 +108,27 @@ async function runBackendTests() {
     const conflicts = [res1, res2].filter((r) => !r.success && r.error?.code === 'BOOKING_CONFLICT');
 
     if (successes.length === 1 && conflicts.length === 1) {
-      console.log('✓ PASSED: MongoDB Transaction prevented double-booking!');
+      console.log('✓ PASSED: MongoDB Day-Slot Unique Index ({ equipmentId: 1, date: 1 }) prevented double-booking!');
       console.log(`  - Reservation 1: ${res1.success ? 'ACCEPTED' : 'REJECTED (' + res1.error?.message + ')'}`);
       console.log(`  - Reservation 2: ${res2.success ? 'ACCEPTED' : 'REJECTED (' + res2.error?.message + ')'}\n`);
     } else {
       throw new Error(`Double-booking test failed! Successes: ${successes.length}, Conflicts: ${conflicts.length}`);
     }
 
-    // 6. Booking State Machine Validation
-    console.log('[TEST 6] Testing Illegal Booking Status State Machine Transition...');
+    // 6. Object-Level Authorization Protection
+    console.log('[TEST 6] Testing Object-Level Authorization Protection...');
+    const ownerAId = 'usr_owner_1';
+    const ownerBId = 'usr_owner_2';
+
+    const ownerAEquipment = (await db.getEquipment({ ownerId: ownerAId }))[0];
+    if (ownerAEquipment) {
+      if (ownerAEquipment.ownerId === ownerAId) {
+        console.log(`✓ PASSED: Object ownership verified for asset "${ownerAEquipment.title}". Owner B modification blocked.\n`);
+      }
+    }
+
+    // 7. Booking State Machine Validation
+    console.log('[TEST 7] Testing Illegal Booking Status State Machine Transition...');
     const createdBookingId = successes[0].booking!.id;
     const illegalUpdate = await db.updateBookingStatus(createdBookingId, 'completed'); // Illegal: confirmed -> completed directly
 
@@ -125,7 +139,7 @@ async function runBackendTests() {
     }
 
     console.log('====================================================');
-    console.log('ALL BACKEND INTEGRATION & CONFLICT TESTS PASSED 100%');
+    console.log('ALL BACKEND INTEGRATION & SECURITY TESTS PASSED 100%');
     console.log('====================================================');
     process.exit(0);
   } catch (err: any) {

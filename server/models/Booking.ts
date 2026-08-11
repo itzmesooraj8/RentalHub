@@ -41,6 +41,27 @@ const BookingSchema = new Schema<BookingType>(
     },
 
     paymentStatus: { type: String, enum: ['unpaid', 'authorized', 'paid', 'refunded'], default: 'paid' },
+    pickupTimestamp: { type: String },
+    returnTimestamp: { type: String },
+    conditionReportBefore: {
+      notes: { type: String },
+      photos: [{ type: String }],
+      verifiedBy: { type: String },
+      timestamp: { type: String },
+    },
+    conditionReportAfter: {
+      notes: { type: String },
+      photos: [{ type: String }],
+      verifiedBy: { type: String },
+      timestamp: { type: String },
+    },
+    damageReport: {
+      description: { type: String },
+      photos: [{ type: String }],
+      claimedAmount: { type: Number },
+      reportedBy: { type: String },
+      timestamp: { type: String },
+    },
     beforePhotos: [{ type: String }],
     afterPhotos: [{ type: String }],
     conditionNotes: { type: String },

@@ -1,51 +1,37 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import {
-  User,
-  Equipment,
-  Booking,
-  AvailabilityBlock,
-  Review,
-  Dispute,
-  Notification,
-  OwnerAnalytics,
-  AdminAnalytics,
-  BookingStatus,
-  KycStatus,
-} from '../src/types';
+import { User, Equipment, Booking, AvailabilityBlock, Review, Dispute, Notification, OwnerAnalytics, AdminAnalytics, UserRole } from '../src/types';
 import { UserModel } from './models/User';
-import { EquipmentModel, IEquipmentMongo } from './models/Equipment';
+import { EquipmentModel } from './models/Equipment';
 import { BookingModel } from './models/Booking';
 import { AvailabilityBlockModel } from './models/AvailabilityBlock';
 import { ReviewModel } from './models/Review';
 import { DisputeModel } from './models/Dispute';
 import { NotificationModel } from './models/Notification';
 import { AuditLogModel } from './models/AuditLog';
+
 import {
   INITIAL_USERS,
   INITIAL_EQUIPMENT,
-  INITIAL_AVAILABILITY,
   INITIAL_BOOKINGS,
   INITIAL_REVIEWS,
   INITIAL_DISPUTES,
   INITIAL_NOTIFICATIONS,
 } from './seedData';
 
-// Allowed Booking State Machine Transitions
-const ALLOWED_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
-  pending: ['confirmed', 'cancelled'],
-  locked: ['confirmed', 'cancelled'],
-  confirmed: ['pickup_ready', 'active', 'cancelled'],
-  pickup_ready: ['active', 'cancelled'],
-  active: ['return_pending', 'completed', 'disputed'],
-  return_pending: ['completed', 'disputed'],
-  completed: [],
-  cancelled: [],
-  disputed: ['completed', 'cancelled'],
-};
+// Helper function to expand start and end dates (YYYY-MM-DD) into daily slot strings
+export function generateDateSlots(startDateStr: string, endDateStr: string): string[] {
+  const dates: string[] = [];
+  const curr = new Date(`${startDateStr}T00:00:00Z`);
+  const end = new Date(`${endDateStr}T00:00:00Z`);
+  while (curr <= end) {
+    dates.push(curr.toISOString().split('T')[0]);
+    curr.setUTCDate(curr.getUTCDate() + 1);
+  }
+  return dates;
+}
 
-class MongoRentalHubDatabase {
-  // --- AUTHENTICATION & USERS ---
+export class MongoDatabaseService {
+  // --- USER OPERATIONS ---
   async getUsers(): Promise<User[]> {
     try {
       const users = await UserModel.find({}).lean();
@@ -53,7 +39,7 @@ class MongoRentalHubDatabase {
     } catch (e) {
       console.error('Mongo getUsers error:', e);
     }
-    return INITIAL_USERS;
+    return INITIAL_USERS as unknown as User[];
   }
 
   async getUserById(id: string): Promise<User | undefined> {
@@ -63,7 +49,7 @@ class MongoRentalHubDatabase {
     } catch (e) {
       console.error('Mongo getUserById error:', e);
     }
-    return INITIAL_USERS.find((u) => u.id === id);
+    return INITIAL_USERS.find((u) => u.id === id) as unknown as User;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -73,32 +59,29 @@ class MongoRentalHubDatabase {
     } catch (e) {
       console.error('Mongo getUserByEmail error:', e);
     }
-    return INITIAL_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    return INITIAL_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase()) as unknown as User;
   }
 
-  async createUser(userData: User & { password?: string }): Promise<User> {
+  async createUser(user: User & { passwordHash?: string }): Promise<User> {
     try {
-      const newUser = { ...userData };
-      await UserModel.create(newUser);
-      await this.logAudit('customer', newUser.name, 'USER_REGISTERED', newUser.id);
-      return newUser;
+      const doc = await UserModel.create(user);
+      await this.logAudit('system', user.name, 'USER_REGISTERED', user.id);
+      return doc.toObject() as unknown as User;
     } catch (e) {
       console.error('Mongo createUser error:', e);
-      throw new Error('Failed to create user in database.');
+      throw new Error('Failed to create user account.');
     }
   }
 
-  async updateUserKyc(userId: string, kycStatus: KycStatus, docUrl?: string): Promise<User | undefined> {
+  async updateUserKyc(userId: string, status: 'pending' | 'verified' | 'rejected', docUrl?: string): Promise<User | undefined> {
     try {
-      const updates: Record<string, any> = { kycStatus };
-      if (docUrl) updates.kycDocUrl = docUrl;
-      if (kycStatus === 'verified') {
-        updates.trustScore = 99;
-        updates.kycVerified = true;
-      }
-      const updated = await UserModel.findOneAndUpdate({ id: userId }, updates, { new: true }).lean();
+      const updated = await UserModel.findOneAndUpdate(
+        { id: userId },
+        { kycStatus: status, kycVerified: status === 'verified', ...(docUrl ? { kycDocUrl: docUrl } : {}) },
+        { new: true }
+      ).lean();
       if (updated) {
-        await this.logAudit('admin', 'Identity Engine', 'KYC_STATUS_UPDATED', userId, `Status: ${kycStatus}`);
+        await this.logAudit('system', updated.name, 'KYC_STATUS_UPDATED', userId, `Status: ${status}`);
         return updated as unknown as User;
       }
     } catch (e) {
@@ -111,14 +94,13 @@ class MongoRentalHubDatabase {
     try {
       const user = await UserModel.findOne({ id: userId });
       if (user) {
-        const index = user.favorites.indexOf(equipmentId);
-        if (index >= 0) {
-          user.favorites.splice(index, 1);
-        } else {
-          user.favorites.push(equipmentId);
-        }
+        const currentFavs = user.favorites || [];
+        const updatedFavs = currentFavs.includes(equipmentId)
+          ? currentFavs.filter((id) => id !== equipmentId)
+          : [...currentFavs, equipmentId];
+        user.favorites = updatedFavs;
         await user.save();
-        return user.favorites;
+        return updatedFavs;
       }
     } catch (e) {
       console.error('Mongo toggleFavorite error:', e);
@@ -126,7 +108,7 @@ class MongoRentalHubDatabase {
     return [];
   }
 
-  // --- EQUIPMENT CRUD & GEOSPATIAL 2DSPHERE SEARCH ---
+  // --- EQUIPMENT OPERATIONS & GEOSPATIAL SEARCH ---
   async getEquipment(filters?: {
     category?: string;
     industry?: string;
@@ -136,7 +118,6 @@ class MongoRentalHubDatabase {
     location?: string;
     lat?: number;
     lng?: number;
-    maxDistanceMeters?: number;
     startDate?: string;
     endDate?: string;
     onlyAvailable?: boolean;
@@ -144,8 +125,7 @@ class MongoRentalHubDatabase {
     ownerId?: string;
   }): Promise<Equipment[]> {
     try {
-      const query: Record<string, any> = {};
-
+      const query: any = {};
       if (filters?.ownerId) query.ownerId = filters.ownerId;
       if (filters?.category && filters.category !== 'All') query.category = filters.category;
       if (filters?.industry && filters.industry !== 'All') query.industry = filters.industry;
@@ -174,7 +154,6 @@ class MongoRentalHubDatabase {
     return INITIAL_EQUIPMENT;
   }
 
-  // Native MongoDB 2dsphere Geospatial Search ($near)
   async getEquipmentNearby(lat: number, lng: number, radiusKm: number = 50): Promise<Equipment[]> {
     try {
       const meters = radiusKm * 1000;
@@ -247,26 +226,23 @@ class MongoRentalHubDatabase {
 
   async deleteEquipment(id: string): Promise<boolean> {
     try {
-      await EquipmentModel.deleteOne({ id });
-      await AvailabilityBlockModel.deleteMany({ equipmentId: id });
-      await this.logAudit('owner', 'Fleet Admin', 'EQUIPMENT_DELETED', id);
-      return true;
+      const res = await EquipmentModel.deleteOne({ id });
+      await this.logAudit('owner', 'Owner', 'EQUIPMENT_DELETED', id);
+      return res.deletedCount > 0;
     } catch (e) {
       console.error('Mongo deleteEquipment error:', e);
       return false;
     }
   }
 
-  // --- AVAILABILITY & ATOMIC BOOKING TRANSACTIONS ---
+  // --- AVAILABILITY ENGINE & DAY-SLOT ATOMIC LOCKING ---
   async isEquipmentAvailable(equipmentId: string, startDate: string, endDate: string): Promise<boolean> {
     try {
-      // Overlap condition: existingStart < requestedEnd AND existingEnd > requestedStart
+      const dateSlots = generateDateSlots(startDate, endDate);
       const existingBlocks = await AvailabilityBlockModel.find({
         equipmentId,
-        startDate: { $lt: endDate },
-        endDate: { $gt: startDate },
+        date: { $in: dateSlots },
       }).lean();
-
       return existingBlocks.length === 0;
     } catch (e) {
       console.error('Mongo isEquipmentAvailable error:', e);
@@ -274,7 +250,22 @@ class MongoRentalHubDatabase {
     }
   }
 
-  // MongoDB Transactional Booking Creation with Double-Booking Prevention
+  async getAvailabilityForMonth(equipmentId: string, year: number, month: number): Promise<string[]> {
+    try {
+      const monthStr = month < 10 ? `0${month}` : `${month}`;
+      const prefix = `${year}-${monthStr}`;
+      const blocks = await AvailabilityBlockModel.find({
+        equipmentId,
+        date: { $regex: `^${prefix}` },
+      }).lean();
+      return blocks.map((b) => b.date);
+    } catch (e) {
+      console.error('Mongo getAvailabilityForMonth error:', e);
+      return [];
+    }
+  }
+
+  // Atomic Day-Slot Reservation Transaction
   async createBooking(booking: Booking): Promise<{ success: boolean; booking?: Booking; error?: { code: string; message: string } }> {
     const session = await mongoose.startSession();
 
@@ -282,55 +273,39 @@ class MongoRentalHubDatabase {
       let createdBooking: Booking | undefined;
       let conflictError: { code: string; message: string } | undefined;
 
-      // 1. Pre-check overlap in database
-      const isAvail = await this.isEquipmentAvailable(booking.equipmentId, booking.startDate, booking.endDate);
-      if (!isAvail) {
-        return {
-          success: false,
-          error: {
-            code: 'BOOKING_CONFLICT',
-            message: `Equipment "${booking.equipmentTitle}" is already reserved for the selected dates (${booking.startDate} to ${booking.endDate}).`,
-          },
-        };
-      }
+      const dateSlots = generateDateSlots(booking.startDate, booking.endDate);
 
       await session.withTransaction(async () => {
-        // 2. Re-check overlap inside transaction
+        // 1. Re-check daily date slot overlaps inside transaction
         const existingBlocks = await AvailabilityBlockModel.find({
           equipmentId: booking.equipmentId,
-          startDate: { $lt: booking.endDate },
-          endDate: { $gt: booking.startDate },
+          date: { $in: dateSlots },
         }).session(session);
 
         if (existingBlocks.length > 0) {
           conflictError = {
             code: 'BOOKING_CONFLICT',
-            message: `Equipment "${booking.equipmentTitle}" is already reserved for the selected dates (${booking.startDate} to ${booking.endDate}).`,
+            message: `Equipment "${booking.equipmentTitle}" is already reserved for part or all of the selected dates (${booking.startDate} to ${booking.endDate}).`,
           };
           await session.abortTransaction();
           return;
         }
 
-        // 3. Insert Availability Block (Enforces atomic unique constraint)
-        await AvailabilityBlockModel.create(
-          [
-            {
-              id: `blk_${Date.now()}_${Math.random().toString(36).slice(-4)}`,
-              equipmentId: booking.equipmentId,
-              startDate: booking.startDate,
-              endDate: booking.endDate,
-              reason: 'booking',
-              bookingId: booking.id,
-            },
-          ],
-          { session }
-        );
+        // 2. Insert Atomic Daily Availability Slots (Enforces compound unique index { equipmentId: 1, date: 1 })
+        const slotDocs = dateSlots.map((date) => ({
+          id: `blk_${Date.now()}_${date}_${Math.random().toString(36).slice(-4)}`,
+          equipmentId: booking.equipmentId,
+          date,
+          reason: 'booking' as const,
+          bookingId: booking.id,
+        }));
+        await AvailabilityBlockModel.insertMany(slotDocs, { session, ordered: true });
 
-        // 4. Insert Booking Document
+        // 3. Insert Booking Document
         const [insertedBooking] = await BookingModel.create([booking], { session });
         createdBooking = insertedBooking.toObject() as unknown as Booking;
 
-        // 5. Insert Audit Log Record
+        // 4. Insert Audit Log Record
         await AuditLogModel.create(
           [
             {
@@ -346,7 +321,7 @@ class MongoRentalHubDatabase {
           { session }
         );
 
-        // 6. Insert Owner Notification
+        // 5. Insert Owner Notification
         await NotificationModel.create(
           [
             {
@@ -378,65 +353,26 @@ class MongoRentalHubDatabase {
           },
         };
       }
-
-      console.error('Mongo createBooking transaction error:', e);
-      return {
-        success: false,
-        error: {
-          code: 'TRANSACTION_FAILED',
-          message: e?.message || 'Database transaction error creating booking.',
-        },
-      };
+      console.error('Mongo createBooking error:', e);
+      return { success: false, error: { code: 'BOOKING_FAILED', message: e?.message || 'Booking transaction failed.' } };
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 
-  async updateBookingStatus(
-    id: string,
-    newStatus: BookingStatus
-  ): Promise<{ success: boolean; booking?: Booking; error?: { code: string; message: string } }> {
+  async getBookings(filter?: { customerId?: string; ownerId?: string; status?: string }): Promise<Booking[]> {
     try {
-      const current = await BookingModel.findOne({ id }).lean();
-      if (!current) {
-        return { success: false, error: { code: 'NOT_FOUND', message: 'Booking not found.' } };
-      }
-
-      const allowedNext = ALLOWED_STATUS_TRANSITIONS[current.status] || [];
-      if (!allowedNext.includes(newStatus)) {
-        return {
-          success: false,
-          error: {
-            code: 'ILLEGAL_TRANSITION',
-            message: `Cannot transition booking status from '${current.status}' to '${newStatus}'. Allowed: [${allowedNext.join(', ')}].`,
-          },
-        };
-      }
-
-      const updated = await BookingModel.findOneAndUpdate({ id }, { status: newStatus }, { new: true }).lean();
-      if (updated) {
-        await this.logAudit('system', 'Rental Engine', 'BOOKING_STATUS_CHANGED', id, `New Status: ${newStatus}`);
-        return { success: true, booking: updated as unknown as Booking };
-      }
-    } catch (e: any) {
-      console.error('Mongo updateBookingStatus error:', e);
-    }
-    return { success: false, error: { code: 'UPDATE_FAILED', message: 'Failed to update booking status.' } };
-  }
-
-  async getBookings(filters?: { customerId?: string; ownerId?: string; status?: BookingStatus }): Promise<Booking[]> {
-    try {
-      const query: Record<string, any> = {};
-      if (filters?.customerId) query.customerId = filters.customerId;
-      if (filters?.ownerId) query.ownerId = filters.ownerId;
-      if (filters?.status) query.status = filters.status;
+      const query: any = {};
+      if (filter?.customerId) query.customerId = filter.customerId;
+      if (filter?.ownerId) query.ownerId = filter.ownerId;
+      if (filter?.status) query.status = filter.status;
 
       const bookings = await BookingModel.find(query).sort({ createdAt: -1 }).lean();
       if (bookings.length) return bookings as unknown as Booking[];
     } catch (e) {
       console.error('Mongo getBookings error:', e);
     }
-    return INITIAL_BOOKINGS;
+    return INITIAL_BOOKINGS as unknown as Booking[];
   }
 
   async getBookingById(id: string): Promise<Booking | undefined> {
@@ -446,28 +382,111 @@ class MongoRentalHubDatabase {
     } catch (e) {
       console.error('Mongo getBookingById error:', e);
     }
-    return INITIAL_BOOKINGS.find((b) => b.id === id);
+    return INITIAL_BOOKINGS.find((b) => b.id === id) as unknown as Booking;
+  }
+
+  async updateBookingStatus(
+    id: string,
+    status: Booking['status']
+  ): Promise<{ success: boolean; booking?: Booking; error?: { code: string; message: string } }> {
+    const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['pickup_ready', 'cancelled'],
+      pickup_ready: ['active', 'cancelled'],
+      active: ['returning', 'completed'],
+      returning: ['completed', 'disputed'],
+      completed: [],
+      cancelled: [],
+      disputed: ['completed', 'cancelled'],
+    };
+
+    try {
+      const booking = await BookingModel.findOne({ id });
+      if (!booking) {
+        return { success: false, error: { code: 'NOT_FOUND', message: 'Booking not found.' } };
+      }
+
+      const allowedNext = ALLOWED_STATUS_TRANSITIONS[booking.status] || [];
+      if (!allowedNext.includes(status)) {
+        return {
+          success: false,
+          error: {
+            code: 'ILLEGAL_TRANSITION',
+            message: `Cannot transition booking from '${booking.status}' to '${status}'. Allowed: [${allowedNext.join(', ')}].`,
+          },
+        };
+      }
+
+      booking.status = status;
+      if (status === 'active') booking.pickupTimestamp = new Date().toISOString();
+      if (status === 'completed') booking.returnTimestamp = new Date().toISOString();
+
+      await booking.save();
+      await this.logAudit('system', 'System', 'BOOKING_STATUS_UPDATED', id, `New Status: ${status}`);
+
+      return { success: true, booking: booking.toObject() as unknown as Booking };
+    } catch (e: any) {
+      console.error('Mongo updateBookingStatus error:', e);
+      return { success: false, error: { code: 'UPDATE_FAILED', message: e?.message || 'Failed to update booking status.' } };
+    }
+  }
+
+  // Persistent Condition & Damage Report Verification
+  async updateBookingCondition(
+    id: string,
+    type: 'before' | 'after' | 'damage',
+    data: { notes?: string; description?: string; photos?: string[]; verifiedBy?: string; claimedAmount?: number }
+  ): Promise<Booking | undefined> {
+    try {
+      const booking = await BookingModel.findOne({ id });
+      if (!booking) return undefined;
+
+      const now = new Date().toISOString();
+
+      if (type === 'before') {
+        booking.conditionReportBefore = {
+          notes: data.notes || '',
+          photos: data.photos || [],
+          verifiedBy: data.verifiedBy || 'Owner',
+          timestamp: now,
+        };
+      } else if (type === 'after') {
+        booking.conditionReportAfter = {
+          notes: data.notes || '',
+          photos: data.photos || [],
+          verifiedBy: data.verifiedBy || 'Owner',
+          timestamp: now,
+        };
+      } else if (type === 'damage') {
+        booking.damageReport = {
+          description: data.description || '',
+          photos: data.photos || [],
+          claimedAmount: data.claimedAmount || 0,
+          reportedBy: data.verifiedBy || 'Owner',
+          timestamp: now,
+        };
+        booking.hasDisputeFlag = true;
+      }
+
+      await booking.save();
+      await this.logAudit('owner', data.verifiedBy || 'Owner', `CONDITION_REPORT_${type.toUpperCase()}`, id);
+      return booking.toObject() as unknown as Booking;
+    } catch (e) {
+      console.error('Mongo updateBookingCondition error:', e);
+      return undefined;
+    }
   }
 
   // --- REVIEWS & DISPUTES ---
   async getReviews(equipmentId?: string): Promise<Review[]> {
     try {
-      const query: Record<string, any> = equipmentId ? { equipmentId } : {};
+      const query = equipmentId ? { equipmentId } : {};
       const reviews = await ReviewModel.find(query).sort({ createdAt: -1 }).lean();
       if (reviews.length) return reviews as unknown as Review[];
     } catch (e) {
       console.error('Mongo getReviews error:', e);
     }
-    return INITIAL_REVIEWS;
-  }
-
-  async createReview(review: Review): Promise<Review> {
-    try {
-      await ReviewModel.create(review);
-    } catch (e) {
-      console.error('Mongo createReview error:', e);
-    }
-    return review;
+    return INITIAL_REVIEWS as unknown as Review[];
   }
 
   async getDisputes(): Promise<Dispute[]> {
@@ -477,15 +496,19 @@ class MongoRentalHubDatabase {
     } catch (e) {
       console.error('Mongo getDisputes error:', e);
     }
-    return INITIAL_DISPUTES;
+    return INITIAL_DISPUTES as unknown as Dispute[];
   }
 
-  async resolveDispute(id: string, winner: 'renter' | 'owner'): Promise<Dispute | undefined> {
+  async resolveDispute(disputeId: string, winner: 'customer' | 'owner'): Promise<Dispute | undefined> {
     try {
-      const updated = await DisputeModel.findOneAndUpdate({ id }, { status: 'resolved' }, { new: true }).lean();
-      if (updated) {
-        await this.logAudit('admin', 'Super Admin', 'DISPUTE_RESOLVED', id, `Favor of ${winner}`);
-        return updated as unknown as Dispute;
+      const dispute = await DisputeModel.findOneAndUpdate(
+        { id: disputeId },
+        { status: 'resolved', resolvedAt: new Date().toISOString(), winner },
+        { new: true }
+      ).lean();
+      if (dispute) {
+        await this.logAudit('admin', 'Platform Admin', 'DISPUTE_RESOLVED', disputeId, `Winner: ${winner}`);
+        return dispute as unknown as Dispute;
       }
     } catch (e) {
       console.error('Mongo resolveDispute error:', e);
@@ -493,7 +516,7 @@ class MongoRentalHubDatabase {
     return undefined;
   }
 
-  // --- NOTIFICATIONS ---
+  // --- NOTIFICATIONS & AUDIT LOG STREAM ---
   async getNotifications(userId: string): Promise<Notification[]> {
     try {
       const notifs = await NotificationModel.find({ userId }).sort({ createdAt: -1 }).lean();
@@ -504,7 +527,6 @@ class MongoRentalHubDatabase {
     return INITIAL_NOTIFICATIONS;
   }
 
-  // --- SECURITY AUDIT LOG STREAM ---
   async logAudit(
     actorRole: 'customer' | 'owner' | 'admin' | 'system',
     actorName: string,
@@ -551,49 +573,41 @@ class MongoRentalHubDatabase {
       ]);
 
       const ownerEquipment = await EquipmentModel.find({ ownerId }).lean();
-      const totalRev = pipelineResult[0]?.totalRevenue || 18450;
-      const totalBks = pipelineResult[0]?.totalBookingsCount || 14;
+      const totalRev = pipelineResult[0]?.totalRevenue || 0;
+      const totalBks = pipelineResult[0]?.totalBookingsCount || 0;
 
       return {
         totalRevenue: totalRev,
         monthlyRevenue: [
-          { month: 'May', revenue: Math.round(totalRev * 0.2), bookingsCount: 3 },
-          { month: 'Jun', revenue: Math.round(totalRev * 0.3), bookingsCount: 4 },
-          { month: 'Jul', revenue: Math.round(totalRev * 0.25), bookingsCount: 4 },
-          { month: 'Aug', revenue: Math.round(totalRev * 0.25), bookingsCount: 3 },
+          { month: 'May', revenue: Math.round(totalRev * 0.2), bookingsCount: Math.ceil(totalBks * 0.2) },
+          { month: 'Jun', revenue: Math.round(totalRev * 0.3), bookingsCount: Math.ceil(totalBks * 0.3) },
+          { month: 'Jul', revenue: Math.round(totalRev * 0.25), bookingsCount: Math.ceil(totalBks * 0.25) },
+          { month: 'Aug', revenue: Math.round(totalRev * 0.25), bookingsCount: Math.ceil(totalBks * 0.25) },
         ],
-        utilizationRatePct: 78,
-        idleCostEstimate: 420,
+        utilizationRatePct: ownerEquipment.length ? Math.min(100, Math.round((totalBks * 5 * 100) / (ownerEquipment.length * 30))) : 0,
+        idleCostEstimate: ownerEquipment.length ? Math.max(0, 500 - totalBks * 30) : 0,
         totalBookings: totalBks,
-        activeEquipmentCount: ownerEquipment.length || 3,
+        activeEquipmentCount: ownerEquipment.length,
         topPerformingEquipment: ownerEquipment.slice(0, 3).map((e) => ({
           title: e.title,
-          revenue: e.dailyRate * 12,
-          utilizationPct: 82,
+          revenue: e.dailyRate * 10,
+          utilizationPct: 75,
         })),
-        totalCo2SavedKg: 1420,
+        totalCo2SavedKg: totalBks * 100,
       };
     } catch (e) {
       console.error('Mongo getOwnerAnalytics pipeline error:', e);
     }
 
     return {
-      totalRevenue: 18450,
-      monthlyRevenue: [
-        { month: 'May', revenue: 3200, bookingsCount: 3 },
-        { month: 'Jun', revenue: 5400, bookingsCount: 4 },
-        { month: 'Jul', revenue: 4800, bookingsCount: 4 },
-        { month: 'Aug', revenue: 5050, bookingsCount: 3 },
-      ],
-      utilizationRatePct: 78,
-      idleCostEstimate: 420,
-      totalBookings: 14,
-      activeEquipmentCount: 3,
-      topPerformingEquipment: [
-        { title: 'Caterpillar 302.7 CR Mini Excavator', revenue: 8400, utilizationPct: 85 },
-        { title: 'DeWalt 60V MAX SDS MAX Rotary Hammer Kit', revenue: 3200, utilizationPct: 72 },
-      ],
-      totalCo2SavedKg: 1420,
+      totalRevenue: 0,
+      monthlyRevenue: [],
+      utilizationRatePct: 0,
+      idleCostEstimate: 0,
+      totalBookings: 0,
+      activeEquipmentCount: 0,
+      topPerformingEquipment: [],
+      totalCo2SavedKg: 0,
     };
   }
 
@@ -620,34 +634,34 @@ class MongoRentalHubDatabase {
       const gmvData = gmvPipeline[0] || {};
 
       return {
-        totalUsers: userCount || 120,
-        customersCount: customersCount || 95,
-        ownersCount: ownersCount || 25,
-        totalEquipment: equipmentCount || 45,
-        pendingApprovals: 4,
-        totalBookingsCount: gmvData.activeBookingsCount || 18,
-        grossTransactionVolume: gmvData.totalGmv || 34200,
-        platformFeesEarned: gmvData.platformRevenue || 3420,
-        openDisputesCount: openDisputeCount || 1,
-        totalCo2SavedKg: 3420,
+        totalUsers: userCount,
+        customersCount,
+        ownersCount,
+        totalEquipment: equipmentCount,
+        pendingApprovals: 0,
+        totalBookingsCount: gmvData.activeBookingsCount || 0,
+        grossTransactionVolume: gmvData.totalGmv || 0,
+        platformFeesEarned: gmvData.platformRevenue || 0,
+        openDisputesCount: openDisputeCount,
+        totalCo2SavedKg: (gmvData.activeBookingsCount || 0) * 150,
       };
     } catch (e) {
       console.error('Mongo getAdminAnalytics pipeline error:', e);
     }
 
     return {
-      totalUsers: 120,
-      customersCount: 95,
-      ownersCount: 25,
-      totalEquipment: 45,
-      pendingApprovals: 4,
-      totalBookingsCount: 18,
-      grossTransactionVolume: 34200,
-      platformFeesEarned: 3420,
-      openDisputesCount: 1,
-      totalCo2SavedKg: 3420,
+      totalUsers: 0,
+      customersCount: 0,
+      ownersCount: 0,
+      totalEquipment: 0,
+      pendingApprovals: 0,
+      totalBookingsCount: 0,
+      grossTransactionVolume: 0,
+      platformFeesEarned: 0,
+      openDisputesCount: 0,
+      totalCo2SavedKg: 0,
     };
   }
 }
 
-export const db = new MongoRentalHubDatabase();
+export const db = new MongoDatabaseService();

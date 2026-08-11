@@ -124,7 +124,8 @@ async function startServer() {
       return sendError(res, 'EMAIL_EXISTS', 'An account with this email already exists.');
     }
 
-    const targetRole: UserRole = ['customer', 'owner', 'admin'].includes(role) ? role : 'customer';
+    // Public registration safety: never allow 'admin' role from public signups
+    const targetRole: UserRole = role === 'owner' ? 'owner' : 'customer';
     const passwordHash = await bcrypt.hash(password, 10);
 
     const newUser: User & { passwordHash?: string } = {
@@ -253,6 +254,15 @@ async function startServer() {
     sendSuccess(res, items);
   });
 
+  app.get('/api/equipment/:id/availability', async (req, res) => {
+    const { year, month } = req.query;
+    const now = new Date();
+    const y = year ? Number(year) : now.getFullYear();
+    const m = month ? Number(month) : now.getMonth() + 1;
+    const blockedDates = await db.getAvailabilityForMonth(req.params.id, y, m);
+    sendSuccess(res, { equipmentId: req.params.id, year: y, month: m, blockedDates });
+  });
+
   app.get('/api/equipment/:id', async (req, res) => {
     const item = await db.getEquipmentById(req.params.id);
     if (!item) return sendError(res, 'NOT_FOUND', 'Equipment listing not found.', 404);
@@ -274,12 +284,27 @@ async function startServer() {
   });
 
   app.put('/api/equipment/:id', authenticate, requireRole('owner', 'admin'), async (req: AuthenticatedRequest, res) => {
+    const existing = await db.getEquipmentById(req.params.id);
+    if (!existing) return sendError(res, 'NOT_FOUND', 'Equipment listing not found.', 404);
+
+    // Object-Level Authorization Check: Owner can only modify their own listings
+    if (existing.ownerId !== req.user!.id && req.user!.role !== 'admin') {
+      return sendError(res, 'FORBIDDEN', 'Access denied. You do not own this equipment listing.', 403);
+    }
+
     const updated = await db.updateEquipment(req.params.id, req.body);
-    if (!updated) return sendError(res, 'NOT_FOUND', 'Equipment listing not found.', 404);
     sendSuccess(res, updated);
   });
 
   app.delete('/api/equipment/:id', authenticate, requireRole('owner', 'admin'), async (req: AuthenticatedRequest, res) => {
+    const existing = await db.getEquipmentById(req.params.id);
+    if (!existing) return sendError(res, 'NOT_FOUND', 'Equipment listing not found.', 404);
+
+    // Object-Level Authorization Check: Owner can only delete their own listings
+    if (existing.ownerId !== req.user!.id && req.user!.role !== 'admin') {
+      return sendError(res, 'FORBIDDEN', 'Access denied. You do not own this equipment listing.', 403);
+    }
+
     const success = await db.deleteEquipment(req.params.id);
     sendSuccess(res, { success });
   });
@@ -387,6 +412,24 @@ async function startServer() {
 
     broadcastSseEvent('BOOKING_STATUS_CHANGED', result.booking);
     sendSuccess(res, result.booking);
+  });
+
+  app.post('/api/bookings/:id/condition', authenticate, async (req: AuthenticatedRequest, res) => {
+    const { type, notes, description, photos, claimedAmount } = req.body;
+    if (!['before', 'after', 'damage'].includes(type)) {
+      return sendError(res, 'VALIDATION_ERROR', 'Condition report type must be before, after, or damage.');
+    }
+
+    const updated = await db.updateBookingCondition(req.params.id, type, {
+      notes,
+      description,
+      photos,
+      claimedAmount,
+      verifiedBy: req.user!.name || req.user!.email,
+    });
+
+    if (!updated) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+    sendSuccess(res, updated);
   });
 
   // --- REVIEWS & DISPUTES ---

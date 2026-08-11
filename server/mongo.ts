@@ -30,8 +30,8 @@ export async function connectMongo() {
     await AvailabilityBlockModel.deleteMany({ bookingId: { $regex: '^bk_test_' } });
 
     const { EquipmentModel } = await import('./models/Equipment');
-    await EquipmentModel.createIndexes();
-    await AvailabilityBlockModel.createIndexes();
+    await EquipmentModel.syncIndexes();
+    await AvailabilityBlockModel.syncIndexes();
 
     // Auto-seed database if initial documents are empty
     await seedMongoDatabase();

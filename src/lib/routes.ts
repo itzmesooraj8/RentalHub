@@ -3,6 +3,7 @@ export const ROUTES = {
   browse: '/browse',
   browseCategory: (cat: string) => `/browse?category=${encodeURIComponent(cat)}`,
   browseMap: '/browse?view=map',
+  compare: '/compare',
   equipmentDetail: (id: string) => `/equipment/${id}`,
   bookEquipment: (id: string) => `/equipment/${id}/book`,
   auth: '/auth',
