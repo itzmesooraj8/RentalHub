@@ -201,12 +201,6 @@ async function startServer() {
     sendSuccess(res, user);
   });
 
-  app.get('/api/auth/me/:userId', async (req, res) => {
-    const user = await db.getUserById(req.params.userId);
-    if (!user) return sendError(res, 'USER_NOT_FOUND', 'User profile not found.', 404);
-    sendSuccess(res, user);
-  });
-
   app.post('/api/auth/kyc', authenticate, async (req: AuthenticatedRequest, res) => {
     const { docUrl } = req.body;
     const updated = await db.updateUserKyc(req.user!.id, 'verified', docUrl);
@@ -405,6 +399,24 @@ async function startServer() {
     const { status } = req.body;
     if (!status) return sendError(res, 'VALIDATION_ERROR', 'Status is required.');
 
+    const booking = await db.getBookingById(req.params.id);
+    if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    // Actor Authorization Matrix Check:
+    // Customers can only cancel their own booking
+    if (req.user!.role === 'customer') {
+      if (booking.customerId !== req.user!.id || status !== 'cancelled') {
+        return sendError(res, 'FORBIDDEN', 'Customers can only cancel their own bookings.', 403);
+      }
+    }
+
+    // Owners can only update status for bookings on their own equipment
+    if (req.user!.role === 'owner') {
+      if (booking.ownerId !== req.user!.id) {
+        return sendError(res, 'FORBIDDEN', 'Owners can only manage bookings for their own equipment.', 403);
+      }
+    }
+
     const result = await db.updateBookingStatus(req.params.id, status);
     if (!result.success) {
       return sendError(res, result.error?.code || 'UPDATE_FAILED', result.error?.message || 'Failed to update booking status.');
@@ -438,6 +450,27 @@ async function startServer() {
     sendSuccess(res, reviews);
   });
 
+  app.post('/api/reviews', authenticate, async (req: AuthenticatedRequest, res) => {
+    const { equipmentId, rating, comment } = req.body;
+    if (!equipmentId || !rating || !comment) {
+      return sendError(res, 'VALIDATION_ERROR', 'equipmentId, rating, and comment are required.');
+    }
+
+    const newReview = await db.createReview({
+      id: `rev_${Date.now()}`,
+      equipmentId,
+      fromUserId: req.user!.id,
+      fromUserName: req.user!.name || req.user!.email,
+      fromUserAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
+      fromRole: req.user!.role === 'owner' ? 'owner' : 'customer',
+      rating: Number(rating),
+      comment,
+      createdAt: new Date().toISOString(),
+    });
+
+    sendSuccess(res, newReview, 201);
+  });
+
   app.get('/api/disputes', authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
     const disputes = await db.getDisputes();
     sendSuccess(res, disputes);
@@ -452,8 +485,62 @@ async function startServer() {
 
   // --- NOTIFICATIONS & AUDIT LOG STREAM ---
   app.get('/api/notifications/:userId', authenticate, async (req: AuthenticatedRequest, res) => {
+    // IDOR Protection: Users can only read their own notifications (unless admin)
+    if (req.user!.id !== req.params.userId && req.user!.role !== 'admin') {
+      return sendError(res, 'FORBIDDEN', 'Access denied to these notifications.', 403);
+    }
     const notifs = await db.getNotifications(req.params.userId);
     sendSuccess(res, notifs);
+  });
+
+  // --- ADMIN USERS & CATEGORIES MANAGEMENT ENDPOINTS ---
+  app.get('/api/admin/users', authenticate, requireRole('admin'), async (req, res) => {
+    const users = await db.getUsers();
+    sendSuccess(res, users);
+  });
+
+  app.patch('/api/admin/users/:id/role', authenticate, requireRole('admin'), async (req, res) => {
+    const { role } = req.body;
+    const updated = await db.updateUserRole(req.params.id, role);
+    if (!updated) return sendError(res, 'NOT_FOUND', 'User not found.', 404);
+    sendSuccess(res, updated);
+  });
+
+  app.patch('/api/admin/users/:id/kyc', authenticate, requireRole('admin'), async (req, res) => {
+    const { status } = req.body;
+    const updated = await db.updateUserKyc(req.params.id, status);
+    if (!updated) return sendError(res, 'NOT_FOUND', 'User not found.', 404);
+    sendSuccess(res, updated);
+  });
+
+  app.get('/api/admin/categories', async (req, res) => {
+    const categories = await db.getCategories();
+    sendSuccess(res, categories);
+  });
+
+  app.post('/api/admin/categories', authenticate, requireRole('admin'), async (req, res) => {
+    const { name, icon, description, industry } = req.body;
+    const newCategory = await db.createCategory({
+      id: `cat_${Date.now()}`,
+      name,
+      icon: icon || 'Folder',
+      description: description || '',
+      itemCount: 0,
+      industry: industry || 'General',
+    });
+    sendSuccess(res, newCategory, 201);
+  });
+
+  app.delete('/api/admin/categories/:id', authenticate, requireRole('admin'), async (req, res) => {
+    const success = await db.deleteCategory(req.params.id);
+    sendSuccess(res, { success });
+  });
+
+  app.patch('/api/admin/equipment/:id/approve', authenticate, requireRole('admin'), async (req, res) => {
+    const { approved } = req.body;
+    const updated = await db.approveEquipment(req.params.id, approved !== false);
+    if (!updated) return sendError(res, 'NOT_FOUND', 'Equipment listing not found.', 404);
+    sendSuccess(res, updated);
   });
 
   app.get('/api/admin/audit-logs', authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {

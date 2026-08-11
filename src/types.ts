@@ -167,13 +167,25 @@ export interface Booking {
   createdAt: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  description?: string;
+  itemCount?: number;
+  industry?: string;
+}
+
 export interface Review {
   id: string;
   bookingId?: string;
   equipmentId: string;
   fromUserId?: string;
-  fromUserName: string;
-  fromUserAvatar: string;
+  fromUserName?: string;
+  fromUserAvatar?: string;
+  authorId?: string;
+  authorName?: string;
+  authorAvatar?: string;
   fromRole?: 'customer' | 'owner';
   toUserId?: string;
   rating: number;

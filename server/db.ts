@@ -8,6 +8,8 @@ import { ReviewModel } from './models/Review';
 import { DisputeModel } from './models/Dispute';
 import { NotificationModel } from './models/Notification';
 import { AuditLogModel } from './models/AuditLog';
+import { CategoryModel } from './models/Category';
+import { Category } from '../src/types';
 
 import {
   INITIAL_USERS,
@@ -139,6 +141,14 @@ export class MongoDatabaseService {
         query.dailyRate = {};
         if (filters.minPrice) query.dailyRate.$gte = Number(filters.minPrice);
         if (filters.maxPrice) query.dailyRate.$lte = Number(filters.maxPrice);
+      }
+
+      if (filters?.startDate && filters?.endDate) {
+        const slots = generateDateSlots(filters.startDate, filters.endDate);
+        const bookedIds = await AvailabilityBlockModel.find({ date: { $in: slots } }).distinct('equipmentId');
+        if (bookedIds.length > 0) {
+          query.id = { $nin: bookedIds };
+        }
       }
 
       let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
@@ -661,6 +671,100 @@ export class MongoDatabaseService {
       openDisputesCount: 0,
       totalCo2SavedKg: 0,
     };
+  }
+
+  // --- ADMIN OPERATIONS ---
+  async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {
+    try {
+      const updated = await UserModel.findOneAndUpdate({ id: userId }, { role }, { new: true }).lean();
+      if (updated) {
+        await this.logAudit('admin', 'Platform Admin', 'USER_ROLE_UPDATED', userId, `New Role: ${role}`);
+        return updated as unknown as User;
+      }
+    } catch (e) {
+      console.error('Mongo updateUserRole error:', e);
+    }
+    return undefined;
+  }
+
+  async getCategories(): Promise<Category[]> {
+    try {
+      const cats = await CategoryModel.find({}).sort({ name: 1 }).lean();
+      if (cats.length) return cats as unknown as Category[];
+    } catch (e) {
+      console.error('Mongo getCategories error:', e);
+    }
+    return [
+      { id: 'cat_1', name: 'Heavy Machinery', icon: 'HardHat', description: 'Excavators, excavating, and loaders', itemCount: 12, industry: 'Construction' },
+      { id: 'cat_2', name: 'Power Tools', icon: 'Wrench', description: 'Rotary hammers, drills, and saws', itemCount: 28, industry: 'Construction' },
+      { id: 'cat_3', name: 'Cinema & Optics', icon: 'Camera', description: 'REDS, optics, and drone kits', itemCount: 18, industry: 'Film & Media' },
+    ];
+  }
+
+  async createCategory(cat: Category): Promise<Category> {
+    try {
+      const created = await CategoryModel.create(cat);
+      await this.logAudit('admin', 'Platform Admin', 'CATEGORY_CREATED', cat.id);
+      return created.toObject() as unknown as Category;
+    } catch (e) {
+      console.error('Mongo createCategory error:', e);
+      throw new Error('Failed to create category.');
+    }
+  }
+
+  async deleteCategory(id: string): Promise<boolean> {
+    try {
+      const res = await CategoryModel.deleteOne({ id });
+      await this.logAudit('admin', 'Platform Admin', 'CATEGORY_DELETED', id);
+      return res.deletedCount > 0;
+    } catch (e) {
+      console.error('Mongo deleteCategory error:', e);
+      return false;
+    }
+  }
+
+  async approveEquipment(id: string, approved: boolean): Promise<Equipment | undefined> {
+    try {
+      const updated = await EquipmentModel.findOneAndUpdate({ id }, { approvedByAdmin: approved }, { new: true }).lean();
+      if (updated) {
+        await this.logAudit('admin', 'Platform Admin', 'EQUIPMENT_APPROVAL_CHANGED', id, `Approved: ${approved}`);
+        return updated as unknown as Equipment;
+      }
+    } catch (e) {
+      console.error('Mongo approveEquipment error:', e);
+    }
+    return undefined;
+  }
+
+  // --- PERSISTENT REVIEWS & RATING AGGREGATION ---
+  async createReview(review: Review): Promise<Review> {
+    try {
+      const created = await ReviewModel.create(review);
+      await this.logAudit('customer', review.authorName || review.fromUserName || 'Customer', 'REVIEW_CREATED', review.equipmentId);
+
+      // Recalculate average rating & reviewCount via MongoDB aggregation
+      const stats = await ReviewModel.aggregate([
+        { $match: { equipmentId: review.equipmentId } },
+        {
+          $group: {
+            _id: '$equipmentId',
+            avgRating: { $avg: '$rating' },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      if (stats.length > 0) {
+        const newRating = Math.round(stats[0].avgRating * 10) / 10;
+        const newCount = stats[0].count;
+        await EquipmentModel.findOneAndUpdate({ id: review.equipmentId }, { rating: newRating, reviewCount: newCount });
+      }
+
+      return created.toObject() as unknown as Review;
+    } catch (e) {
+      console.error('Mongo createReview error:', e);
+      throw new Error('Failed to submit review.');
+    }
   }
 }
 

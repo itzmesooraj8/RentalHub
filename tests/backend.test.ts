@@ -115,20 +115,55 @@ async function runBackendTests() {
       throw new Error(`Double-booking test failed! Successes: ${successes.length}, Conflicts: ${conflicts.length}`);
     }
 
-    // 6. Object-Level Authorization Protection
-    console.log('[TEST 6] Testing Object-Level Authorization Protection...');
-    const ownerAId = 'usr_owner_1';
-    const ownerBId = 'usr_owner_2';
+    // 6. Date-Filtered Availability Search ($nin blockedIds)
+    console.log('[TEST 6] Testing Date-Filtered Availability Search (excludes booked equipment)...');
+    const availableEquipment = await db.getEquipment({
+      startDate: testStartDate,
+      endDate: testEndDate,
+    });
 
+    const containsReservedAsset = availableEquipment.some((e) => e.id === targetEq.id);
+    if (!containsReservedAsset) {
+      console.log(`✓ PASSED: Date-filtered search successfully excluded reserved asset "${targetEq.title}" for interval ${testStartDate}..${testEndDate}.\n`);
+    } else {
+      throw new Error('Date-filtered availability search failed to exclude reserved equipment.');
+    }
+
+    // 7. Persistent Reviews API & Rating Aggregation
+    console.log('[TEST 7] Testing Persistent Reviews API & Rating Aggregation...');
+    const testReview = {
+      id: `rev_test_${Date.now()}`,
+      equipmentId: targetEq.id,
+      fromUserId: testCustomer.id,
+      fromUserName: testCustomer.name,
+      fromRole: 'customer' as const,
+      rating: 5,
+      comment: 'Excellent heavy machinery in prime operating condition!',
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.createReview(testReview);
+    const updatedTarget = await db.getEquipmentById(targetEq.id);
+
+    if (updatedTarget && updatedTarget.reviewCount >= 1) {
+      console.log(`✓ PASSED: Persistent review created. Updated equipment rating: ${updatedTarget.rating} stars (${updatedTarget.reviewCount} reviews).\n`);
+    } else {
+      throw new Error('Persistent review creation and rating aggregation failed.');
+    }
+
+    // 8. Object-Level Authorization Protection
+    console.log('[TEST 8] Testing Object-Level Authorization Protection...');
+    const ownerAId = 'usr_owner_1';
     const ownerAEquipment = (await db.getEquipment({ ownerId: ownerAId }))[0];
+
     if (ownerAEquipment) {
       if (ownerAEquipment.ownerId === ownerAId) {
         console.log(`✓ PASSED: Object ownership verified for asset "${ownerAEquipment.title}". Owner B modification blocked.\n`);
       }
     }
 
-    // 7. Booking State Machine Validation
-    console.log('[TEST 7] Testing Illegal Booking Status State Machine Transition...');
+    // 9. Booking State Machine Validation
+    console.log('[TEST 9] Testing Illegal Booking Status State Machine Transition...');
     const createdBookingId = successes[0].booking!.id;
     const illegalUpdate = await db.updateBookingStatus(createdBookingId, 'completed'); // Illegal: confirmed -> completed directly
 
