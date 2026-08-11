@@ -76,15 +76,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const toggleFavorite = (equipmentId: string) => {
+  const toggleFavorite = async (equipmentId: string) => {
     if (!currentUser) return;
     const currentFavs = currentUser.favorites || [];
     const updatedFavs = currentFavs.includes(equipmentId)
       ? currentFavs.filter((id) => id !== equipmentId)
       : [...currentFavs, equipmentId];
 
+    const previousUser = { ...currentUser };
     setCurrentUser({ ...currentUser, favorites: updatedFavs });
-    authService.toggleFavorite(equipmentId).catch(() => {});
+    try {
+      await authService.toggleFavorite(equipmentId);
+    } catch (err) {
+      console.error('Failed to sync favorite status with server:', err);
+      setCurrentUser(previousUser);
+    }
   };
 
   const updateUser = (updates: Partial<User>) => {

@@ -603,15 +603,6 @@ export class MongoDatabaseService {
   }
 
   // --- NOTIFICATIONS & AUDIT LOG STREAM ---
-  async getNotifications(userId: string): Promise<Notification[]> {
-    try {
-      const notifs = await NotificationModel.find({ userId }).sort({ createdAt: -1 }).lean();
-      if (notifs.length) return notifs as unknown as Notification[];
-    } catch (e) {
-      console.error('Mongo getNotifications error:', e);
-    }
-    return INITIAL_NOTIFICATIONS;
-  }
 
   async logAudit(
     actorRole: 'customer' | 'owner' | 'admin' | 'system',
@@ -895,6 +886,50 @@ export class MongoDatabaseService {
     } catch (e) {
       console.error('Mongo createReview error:', e);
       throw new Error('Failed to submit review.');
+    }
+  }
+
+  // --- REAL MONGODB NOTIFICATIONS AGGREGATION & PERSISTENCE ---
+  async getNotifications(userId?: string): Promise<Notification[]> {
+    try {
+      const query = userId ? { userId } : {};
+      const notifs = await NotificationModel.find(query).sort({ createdAt: -1 }).lean();
+      if (notifs.length) return notifs as unknown as Notification[];
+    } catch (e) {
+      console.error('Mongo getNotifications error:', e);
+      if (process.env.NODE_ENV === 'production') throw new Error('Database service unavailable.');
+    }
+    return INITIAL_NOTIFICATIONS as unknown as Notification[];
+  }
+
+  async markNotificationRead(id: string): Promise<boolean> {
+    try {
+      const res = await NotificationModel.updateOne({ id }, { read: true });
+      return res.modifiedCount > 0;
+    } catch (e) {
+      console.error('Mongo markNotificationRead error:', e);
+      return false;
+    }
+  }
+
+  async markAllNotificationsRead(userId?: string): Promise<boolean> {
+    try {
+      const query = userId ? { userId } : {};
+      await NotificationModel.updateMany(query, { read: true });
+      return true;
+    } catch (e) {
+      console.error('Mongo markAllNotificationsRead error:', e);
+      return false;
+    }
+  }
+
+  async createNotification(notif: Notification): Promise<Notification> {
+    try {
+      const created = await NotificationModel.create(notif);
+      return created.toObject() as unknown as Notification;
+    } catch (e) {
+      console.error('Mongo createNotification error:', e);
+      throw new Error('Failed to create notification.');
     }
   }
 

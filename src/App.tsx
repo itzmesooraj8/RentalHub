@@ -56,7 +56,7 @@ const BookRedirect: React.FC = () => {
 };
 
 function AppRoutes() {
-  const { currentUser, toggleFavorite, loginRole } = useAuth();
+  const { currentUser, toggleFavorite, loginRole, updateUser } = useAuth();
   const {
     equipmentList,
     bookings,
@@ -415,7 +415,7 @@ function AppRoutes() {
                 <ProtectedRoute user={currentUser}>
                   <ProfilePage
                     user={currentUser!}
-                    onUpdateUser={() => {}}
+                    onUpdateUser={updateUser}
                     onSwitchRole={loginRole}
                   />
                 </ProtectedRoute>

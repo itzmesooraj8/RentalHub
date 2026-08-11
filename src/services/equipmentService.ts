@@ -24,8 +24,8 @@ export const equipmentService = {
     if (filters?.category && filters.category !== 'All') params.append('category', filters.category);
     if (filters?.industry && filters.industry !== 'All') params.append('industry', filters.industry);
     if (filters?.search) params.append('search', filters.search);
-    if (filters?.minPrice) params.append('minPrice', filters.minPrice.toString());
-    if (filters?.maxPrice && filters.maxPrice < 1200) params.append('maxPrice', filters.maxPrice.toString());
+    if (filters?.minPrice !== undefined) params.append('minPrice', filters.minPrice.toString());
+    if (filters?.maxPrice !== undefined) params.append('maxPrice', filters.maxPrice.toString());
     if (filters?.location) params.append('location', filters.location);
     if (filters?.lat !== undefined) params.append('lat', filters.lat.toString());
     if (filters?.lng !== undefined) params.append('lng', filters.lng.toString());

@@ -514,6 +514,22 @@ async function startServer() {
     sendSuccess(res, updated);
   });
 
+  // --- REAL MONGODB NOTIFICATION API ENDPOINTS ---
+  app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, res) => {
+    const notifs = await db.getNotifications(req.user!.role === 'admin' ? undefined : req.user!.id);
+    sendSuccess(res, notifs);
+  });
+
+  app.patch('/api/notifications/:id/read', authenticate, async (req: AuthenticatedRequest, res) => {
+    const updated = await db.markNotificationRead(req.params.id);
+    sendSuccess(res, { success: updated });
+  });
+
+  app.patch('/api/notifications/read-all', authenticate, async (req: AuthenticatedRequest, res) => {
+    const updated = await db.markAllNotificationsRead(req.user!.role === 'admin' ? undefined : req.user!.id);
+    sendSuccess(res, { success: updated });
+  });
+
   // --- WEBHOOK-BASED ESCROW TRANSACTIONAL LEDGER ENDPOINTS ---
   app.get('/api/payments/escrow-ledger/:bookingId', authenticate, async (req: AuthenticatedRequest, res) => {
     const booking = await db.getBookingById(req.params.bookingId);

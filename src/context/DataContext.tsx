@@ -53,16 +53,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     try {
-      const [eqs, bks, revs, disps] = await Promise.all([
+      const [eqs, bks, revs, disps, notifs] = await Promise.all([
         equipmentService.getEquipment(),
         bookingService.getBookings().catch(() => []),
         apiClient.get<{ success: boolean; data: Review[] }>('/api/reviews').then((r) => r.data.data).catch(() => []),
         apiClient.get<{ success: boolean; data: Dispute[] }>('/api/disputes').then((r) => r.data.data).catch(() => []),
+        apiClient.get<{ success: boolean; data: Notification[] }>('/api/notifications').then((r) => r.data.data).catch(() => []),
       ]);
       setEquipmentList(eqs);
       setBookings(bks);
       setReviews(revs);
       setDisputes(disps);
+      setNotifications(notifs);
     } catch (err: any) {
       console.error('Failed to load backend data:', err);
       setError(err?.message || 'Failed to connect to backend server.');
@@ -90,6 +92,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     eventSource.addEventListener('BOOKING_STATUS_CHANGED', () => refreshData());
     eventSource.addEventListener('ESCROW_RELEASED', () => refreshData());
     eventSource.addEventListener('PAYMENT_RECEIVED', () => refreshData());
+    eventSource.addEventListener('NOTIFICATION_ADDED', () => refreshData());
+    eventSource.addEventListener('DISPUTE_CREATED', () => refreshData());
 
     return () => {
       eventSource.close();
@@ -184,12 +188,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDisputes((prev) => prev.map((d) => (d.id === disputeId ? { ...d, status: 'resolved' as const } : d)));
   };
 
-  const markNotificationsRead = () => {
+  const markNotificationsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    await apiClient.patch('/api/notifications/read-all').catch(() => {});
   };
 
-  const markNotificationRead = (id: string) => {
+  const markNotificationRead = async (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    await apiClient.patch(`/api/notifications/${id}/read`).catch(() => {});
   };
 
   return (
