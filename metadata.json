@@ -1,0 +1,6 @@
+{
+  "name": "RentalHub",
+  "description": "Universal peer-to-peer equipment rental marketplace supporting construction, agriculture, media, events, logistics, and industrial tools with live discovery map, trust scores, dispute management, and AI dynamic pricing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
