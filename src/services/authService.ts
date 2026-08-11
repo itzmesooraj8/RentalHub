@@ -1,50 +1,50 @@
 import { apiClient } from './apiClient';
 import { User, UserRole } from '../types';
-import { CURRENT_USER } from '../data/mockData';
 
 export const authService = {
+  async register(data: { name: string; email: string; password?: string; role?: UserRole; phone?: string; location?: string }): Promise<{ user: User; token: string }> {
+    const res = await apiClient.post<{ success: boolean; data: { user: User; token: string } }>('/api/auth/register', data);
+    localStorage.setItem('rentalhub_token', res.data.data.token);
+    return res.data.data;
+  },
+
+  async login(email: string, role?: UserRole): Promise<{ user: User; token: string }> {
+    const res = await apiClient.post<{ success: boolean; data: { user: User; token: string } }>('/api/auth/login', { email, role });
+    localStorage.setItem('rentalhub_token', res.data.data.token);
+    return res.data.data;
+  },
+
   async loginWithRole(role: UserRole): Promise<{ user: User; token: string }> {
-    try {
-      const res = await apiClient.post<{ user: User; token: string }>('/api/auth/demo-login', { role });
-      return res.data;
-    } catch {
-      return {
-        user: { ...CURRENT_USER, role },
-        token: `mock_jwt_token_${role}`,
-      };
-    }
+    const res = await apiClient.post<{ success: boolean; data: { user: User; token: string } }>('/api/auth/demo-login', { role });
+    localStorage.setItem('rentalhub_token', res.data.data.token);
+    return res.data.data;
   },
 
-  async getCurrentUser(userId: string): Promise<User | null> {
-    try {
-      const res = await apiClient.get<User>(`/api/auth/me/${userId}`);
-      return res.data;
-    } catch {
-      return CURRENT_USER;
-    }
+  async getCurrentUser(): Promise<User> {
+    const res = await apiClient.get<{ success: boolean; data: User }>('/api/auth/me');
+    return res.data.data;
   },
 
-  async toggleFavorite(userId: string, equipmentId: string): Promise<string[]> {
-    try {
-      const res = await apiClient.post<{ success: boolean; favorites: string[] }>('/api/auth/favorite', {
-        userId,
-        equipmentId,
-      });
-      return res.data.favorites;
-    } catch {
-      return [equipmentId];
-    }
+  async getUserById(userId: string): Promise<User> {
+    const res = await apiClient.get<{ success: boolean; data: User }>(`/api/auth/me/${userId}`);
+    return res.data.data;
   },
 
-  async submitKyc(userId: string, docUrl: string): Promise<User | null> {
-    try {
-      const res = await apiClient.post<{ success: boolean; user: User }>('/api/auth/kyc', {
-        userId,
-        docUrl,
-      });
-      return res.data.user;
-    } catch {
-      return { ...CURRENT_USER, kycStatus: 'verified', kycVerified: true };
-    }
+  async toggleFavorite(equipmentId: string): Promise<string[]> {
+    const res = await apiClient.post<{ success: boolean; data: { favorites: string[] } }>('/api/auth/favorite', {
+      equipmentId,
+    });
+    return res.data.data.favorites;
+  },
+
+  async submitKyc(docUrl: string): Promise<User> {
+    const res = await apiClient.post<{ success: boolean; data: User }>('/api/auth/kyc', {
+      docUrl,
+    });
+    return res.data.data;
+  },
+
+  logout(): void {
+    localStorage.removeItem('rentalhub_token');
   },
 };

@@ -15,7 +15,7 @@ const AvailabilityBlockSchema = new Schema<AvailabilityBlockType>(
   }
 );
 
-AvailabilityBlockSchema.index({ equipmentId: 1, startDate: 1, endDate: 1 });
+AvailabilityBlockSchema.index({ equipmentId: 1, startDate: 1, endDate: 1 }, { unique: true });
 
 export const AvailabilityBlockModel: Model<AvailabilityBlockType> =
   (mongoose.models.AvailabilityBlock as Model<AvailabilityBlockType>) ||

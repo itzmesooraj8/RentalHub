@@ -1,14 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Equipment, Booking, Review, Dispute, Notification, BookingStatus } from '../types';
-import {
-  MOCK_EQUIPMENT,
-  MOCK_BOOKINGS,
-  MOCK_REVIEWS,
-  MOCK_DISPUTES,
-  MOCK_NOTIFICATIONS,
-} from '../data/mockData';
 import { equipmentService } from '../services/equipmentService';
 import { bookingService } from '../services/bookingService';
+import { apiClient } from '../services/apiClient';
 
 interface DataContextType {
   equipmentList: Equipment[];
@@ -17,13 +11,21 @@ interface DataContextType {
   disputes: Dispute[];
   notifications: Notification[];
   loading: boolean;
-  addEquipment: (newEq: Equipment) => void;
-  updateEquipment: (id: string, updates: Partial<Equipment>) => void;
-  deleteEquipment: (id: string) => void;
-  updateEquipmentRate: (id: string, newRate: number) => void;
-  addBooking: (newBooking: Booking) => void;
-  updateBookingStatus: (id: string, status: BookingStatus) => void;
-  cancelBooking: (id: string) => void;
+  error: string | null;
+  refreshData: () => Promise<void>;
+  addEquipment: (newEq: Partial<Equipment>) => Promise<Equipment>;
+  updateEquipment: (id: string, updates: Partial<Equipment>) => Promise<void>;
+  deleteEquipment: (id: string) => Promise<void>;
+  updateEquipmentRate: (id: string, newRate: number) => Promise<void>;
+  addBooking: (bookingData: {
+    equipmentId: string;
+    startDate: string;
+    endDate: string;
+    deliveryMethod?: 'pickup' | 'delivery';
+    deliveryAddress?: string;
+  }) => Promise<Booking>;
+  updateBookingStatus: (id: string, status: BookingStatus) => Promise<void>;
+  cancelBooking: (id: string) => Promise<void>;
   updateBookingCondition: (
     bookingId: string,
     beforePhotos: string[],
@@ -31,7 +33,7 @@ interface DataContextType {
     conditionNotes: string
   ) => void;
   addReview: (newReview: Review) => void;
-  resolveDispute: (disputeId: string, winner: 'renter' | 'owner') => void;
+  resolveDispute: (disputeId: string, winner: 'renter' | 'owner') => Promise<void>;
   markNotificationsRead: () => void;
   markNotificationRead: (id: string) => void;
 }
@@ -39,43 +41,77 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>(MOCK_EQUIPMENT);
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
-  const [reviews, setReviews] = useState<Review[]>(MOCK_REVIEWS);
-  const [disputes, setDisputes] = useState<Dispute[]>(MOCK_DISPUTES);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addEquipment = (newEq: Equipment) => {
-    setEquipmentList((prev) => [newEq, ...prev]);
-    equipmentService.createEquipment(newEq).catch(() => {});
+  const refreshData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [eqs, bks] = await Promise.all([
+        equipmentService.getEquipment(),
+        bookingService.getBookings().catch(() => []),
+      ]);
+      setEquipmentList(eqs);
+      setBookings(bks);
+    } catch (err: any) {
+      console.error('Failed to load backend data:', err);
+      setError(err?.message || 'Failed to connect to backend server.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateEquipment = (id: string, updates: Partial<Equipment>) => {
-    setEquipmentList((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
-    equipmentService.updateEquipment(id, updates).catch(() => {});
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  const addEquipment = async (newEqData: Partial<Equipment>): Promise<Equipment> => {
+    const created = await equipmentService.createEquipment(newEqData);
+    setEquipmentList((prev) => [created, ...prev]);
+    return created;
   };
 
-  const deleteEquipment = (id: string) => {
+  const updateEquipment = async (id: string, updates: Partial<Equipment>): Promise<void> => {
+    const updated = await equipmentService.updateEquipment(id, updates);
+    setEquipmentList((prev) => prev.map((e) => (e.id === id ? updated : e)));
+  };
+
+  const deleteEquipment = async (id: string): Promise<void> => {
+    await equipmentService.deleteEquipment(id);
     setEquipmentList((prev) => prev.filter((e) => e.id !== id));
-    equipmentService.deleteEquipment(id).catch(() => {});
   };
 
-  const updateEquipmentRate = (id: string, newRate: number) => {
-    setEquipmentList((prev) => prev.map((e) => (e.id === id ? { ...e, dailyRate: newRate } : e)));
+  const updateEquipmentRate = async (id: string, newRate: number): Promise<void> => {
+    const updated = await equipmentService.updateEquipment(id, { dailyRate: newRate });
+    setEquipmentList((prev) => prev.map((e) => (e.id === id ? updated : e)));
   };
 
-  const addBooking = (newBooking: Booking) => {
-    setBookings((prev) => [newBooking, ...prev]);
+  const addBooking = async (bookingData: {
+    equipmentId: string;
+    startDate: string;
+    endDate: string;
+    deliveryMethod?: 'pickup' | 'delivery';
+    deliveryAddress?: string;
+  }): Promise<Booking> => {
+    // Crucial fix: call backend API and throw error on conflict/failure so UI handles it accurately!
+    const created = await bookingService.createBooking(bookingData);
+    setBookings((prev) => [created, ...prev]);
+    return created;
   };
 
-  const updateBookingStatus = (id: string, status: BookingStatus) => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
-    bookingService.updateBookingStatus(id, status).catch(() => {});
+  const updateBookingStatus = async (id: string, status: BookingStatus): Promise<void> => {
+    const updated = await bookingService.updateBookingStatus(id, status);
+    setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
   };
 
-  const cancelBooking = (id: string) => {
-    updateBookingStatus(id, 'cancelled');
+  const cancelBooking = async (id: string): Promise<void> => {
+    await updateBookingStatus(id, 'cancelled');
   };
 
   const updateBookingCondition = (
@@ -85,7 +121,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     conditionNotes: string
   ) => {
     const hasDifferences = conditionNotes.trim().length > 0;
-
     setBookings((prev) =>
       prev.map((b) => {
         if (b.id === bookingId) {
@@ -101,34 +136,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return b;
       })
     );
-
-    if (hasDifferences) {
-      const targetBooking = bookings.find((b) => b.id === bookingId);
-      if (targetBooking) {
-        const newDispute: Dispute = {
-          id: `disp-auto-${Date.now().toString().slice(-4)}`,
-          bookingId: bookingId,
-          equipmentTitle: targetBooking.equipmentTitle,
-          renterName: targetBooking.customerName || targetBooking.renterName,
-          ownerName: targetBooking.ownerName,
-          reason: 'Condition Difference / Inspection Discrepancy',
-          amountClaimed: targetBooking.priceBreakdown.securityDeposit,
-          status: 'open',
-          description: conditionNotes,
-          createdAt: new Date().toISOString().split('T')[0],
-          beforePhotos,
-          afterPhotos,
-        };
-        setDisputes((prev) => [newDispute, ...prev.filter((d) => d.bookingId !== bookingId)]);
-      }
-    }
   };
 
   const addReview = (newReview: Review) => {
     setReviews((prev) => [newReview, ...prev]);
   };
 
-  const resolveDispute = (disputeId: string, winner: 'renter' | 'owner') => {
+  const resolveDispute = async (disputeId: string, winner: 'renter' | 'owner'): Promise<void> => {
+    await apiClient.post(`/api/disputes/${disputeId}/resolve`, { winner });
     setDisputes((prev) => prev.map((d) => (d.id === disputeId ? { ...d, status: 'resolved' as const } : d)));
   };
 
@@ -149,6 +164,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         disputes,
         notifications,
         loading,
+        error,
+        refreshData,
         addEquipment,
         updateEquipment,
         deleteEquipment,

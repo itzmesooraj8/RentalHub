@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       : [...currentFavs, equipmentId];
 
     setCurrentUser({ ...currentUser, favorites: updatedFavs });
-    authService.toggleFavorite(currentUser.id, equipmentId).catch(() => {});
+    authService.toggleFavorite(equipmentId).catch(() => {});
   };
 
   const updateUser = (updates: Partial<User>) => {
