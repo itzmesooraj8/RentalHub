@@ -57,33 +57,20 @@ export const BookingFlowPage: React.FC<BookingFlowPageProps> = ({
     total: totalCharge,
   };
 
-  const handlePaymentSuccess = () => {
-    const renterId = currentUser?.id || 'usr_cust_1';
-    const renterName = currentUser?.name || 'Authorized Customer';
-
-    const newBooking: Booking = {
-      id: `bk-${Math.floor(1000 + Math.random() * 9000)}`,
-      equipmentId: equipment.id,
-      equipmentTitle: equipment.title,
-      equipmentImage: equipment.images[0],
-      customerId: renterId,
-      customerName: renterName,
-      renterId,
-      renterName,
-      ownerId: equipment.ownerId,
-      ownerName: equipment.ownerName,
-      startDate,
-      endDate,
-      deliveryMethod,
-      deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
-      status: 'locked',
-      priceBreakdown,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-
-    onAddBooking(newBooking);
-    setIsStripeModalOpen(false);
-    navigate('/dashboard/customer');
+  const handlePaymentSuccess = async () => {
+    try {
+      await onAddBooking({
+        equipmentId: equipment.id,
+        startDate,
+        endDate,
+        deliveryMethod,
+        deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
+      });
+      setIsStripeModalOpen(false);
+      navigate('/dashboard/customer');
+    } catch (err: any) {
+      alert(err?.message || 'Booking failed. Selected dates are already reserved.');
+    }
   };
 
   return (

@@ -31,8 +31,8 @@ interface DataContextType {
     beforePhotos: string[],
     afterPhotos: string[],
     conditionNotes: string
-  ) => void;
-  addReview: (newReview: Review) => void;
+  ) => Promise<void>;
+  addReview: (newReview: Review) => Promise<void>;
   resolveDispute: (disputeId: string, winner: 'renter' | 'owner') => Promise<void>;
   markNotificationsRead: () => void;
   markNotificationRead: (id: string) => void;
@@ -53,12 +53,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     try {
-      const [eqs, bks] = await Promise.all([
+      const [eqs, bks, revs, disps] = await Promise.all([
         equipmentService.getEquipment(),
         bookingService.getBookings().catch(() => []),
+        apiClient.get<{ success: boolean; data: Review[] }>('/api/reviews').then((r) => r.data.data).catch(() => []),
+        apiClient.get<{ success: boolean; data: Dispute[] }>('/api/disputes').then((r) => r.data.data).catch(() => []),
       ]);
       setEquipmentList(eqs);
       setBookings(bks);
+      setReviews(revs);
+      setDisputes(disps);
     } catch (err: any) {
       console.error('Failed to load backend data:', err);
       setError(err?.message || 'Failed to connect to backend server.');
@@ -69,6 +73,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     refreshData();
+
+    // Subscribe to Real-Time SSE Availability & Booking Push Stream
+    const eventSource = new EventSource('/api/events');
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('⚡ [SSE Real-Time Event Stream]', data);
+        refreshData();
+      } catch (e) {
+        // SSE keepalive ping
+      }
+    };
+    eventSource.addEventListener('EQUIPMENT_CREATED', () => refreshData());
+    eventSource.addEventListener('BOOKING_CREATED', () => refreshData());
+    eventSource.addEventListener('BOOKING_STATUS_CHANGED', () => refreshData());
+    eventSource.addEventListener('ESCROW_RELEASED', () => refreshData());
+    eventSource.addEventListener('PAYMENT_RECEIVED', () => refreshData());
+
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
   const addEquipment = async (newEqData: Partial<Equipment>): Promise<Equipment> => {
@@ -99,7 +124,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     deliveryMethod?: 'pickup' | 'delivery';
     deliveryAddress?: string;
   }): Promise<Booking> => {
-    // Crucial fix: call backend API and throw error on conflict/failure so UI handles it accurately!
     const created = await bookingService.createBooking(bookingData);
     setBookings((prev) => [created, ...prev]);
     return created;
@@ -114,13 +138,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await updateBookingStatus(id, 'cancelled');
   };
 
-  const updateBookingCondition = (
+  const updateBookingCondition = async (
     bookingId: string,
     beforePhotos: string[],
     afterPhotos: string[],
     conditionNotes: string
-  ) => {
+  ): Promise<void> => {
     const hasDifferences = conditionNotes.trim().length > 0;
+    const type = beforePhotos.length > 0 ? 'before' : 'after';
+    await apiClient.post(`/api/bookings/${bookingId}/condition`, {
+      type,
+      notes: conditionNotes,
+      photos: [...beforePhotos, ...afterPhotos],
+    });
     setBookings((prev) =>
       prev.map((b) => {
         if (b.id === bookingId) {
@@ -138,8 +168,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const addReview = (newReview: Review) => {
-    setReviews((prev) => [newReview, ...prev]);
+  const addReview = async (newReview: Review): Promise<void> => {
+    const res = await apiClient.post<{ success: boolean; data: Review }>('/api/reviews', {
+      equipmentId: newReview.equipmentId,
+      rating: newReview.rating,
+      comment: newReview.comment,
+    });
+    const created = res.data.data;
+    setReviews((prev) => [created, ...prev]);
+    equipmentService.getEquipment().then(setEquipmentList).catch(() => {});
   };
 
   const resolveDispute = async (disputeId: string, winner: 'renter' | 'owner'): Promise<void> => {

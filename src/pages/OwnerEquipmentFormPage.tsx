@@ -99,7 +99,7 @@ export const OwnerEquipmentFormPage: React.FC<OwnerEquipmentFormPageProps> = ({
     setGalleryImages(galleryImages.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const specs: Record<string, string> = {};
@@ -123,49 +123,41 @@ export const OwnerEquipmentFormPage: React.FC<OwnerEquipmentFormPageProps> = ({
 
     const allImages = [coverImage, ...galleryImages].filter(Boolean);
 
-    if (isEditing && equipmentId && onUpdateEquipment) {
-      onUpdateEquipment(equipmentId, {
-        title,
-        category,
-        industry,
-        description,
-        dailyRate: Number(dailyRate),
-        weeklyRate: Number(weeklyRate),
-        securityDeposit: Number(securityDeposit),
-        location,
-        images: allImages,
-        specs,
-      });
-    } else if (onCreateEquipment && currentUser) {
-      const newEq: Equipment = {
-        id: `eq_${Date.now()}`,
-        ownerId: currentUser.id,
-        ownerName: currentUser.name,
-        ownerAvatar: currentUser.avatar,
-        ownerTrustScore: currentUser.trustScore,
-        ownerKyVerified: Boolean(currentUser.kycVerified),
-        title: title || 'New Fleet Equipment',
-        category,
-        industry,
-        description: description || 'Verified operating equipment in prime rental condition.',
-        dailyRate: Number(dailyRate),
-        weeklyRate: Number(weeklyRate),
-        securityDeposit: Number(securityDeposit),
-        location,
-        lat: 30.2672,
-        lng: -97.7431,
-        images: allImages.length ? allImages : ['https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=1000'],
-        specs,
-        status: 'active',
-        rating: 5.0,
-        reviewCount: 0,
-        co2SavedPerDayKg: Math.round((dailyRate / 20) * 10) / 10,
-        createdAt: new Date().toISOString(),
-      };
-      onCreateEquipment(newEq);
+    try {
+      if (isEditing && equipmentId && onUpdateEquipment) {
+        await onUpdateEquipment(equipmentId, {
+          title,
+          category,
+          industry,
+          description,
+          dailyRate: Number(dailyRate),
+          weeklyRate: Number(weeklyRate),
+          securityDeposit: Number(securityDeposit),
+          location,
+          images: allImages,
+          specs,
+        });
+      } else if (onCreateEquipment) {
+        await onCreateEquipment({
+          title: title || 'New Fleet Equipment',
+          category,
+          industry,
+          description: description || 'Verified operating equipment in prime rental condition.',
+          dailyRate: Number(dailyRate),
+          weeklyRate: Number(weeklyRate),
+          securityDeposit: Number(securityDeposit),
+          location,
+          lat: 19.0760,
+          lng: 72.8777,
+          images: allImages.length ? allImages : ['https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=1000'],
+          specs,
+          co2SavedPerDayKg: Math.round((Number(dailyRate) / 20) * 10) / 10,
+        });
+      }
+      navigate(ROUTES.ownerEquipment);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to save equipment listing.');
     }
-
-    navigate(ROUTES.ownerEquipment);
   };
 
   return (

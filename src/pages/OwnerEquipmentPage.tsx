@@ -276,8 +276,8 @@ export const OwnerEquipmentPage: React.FC<OwnerEquipmentPageProps> = ({
                 <div>
                   <h3 className="font-serif italic text-white text-base line-clamp-1">{item.title}</h3>
                   <div className="flex items-center justify-between text-xs text-[#888888] font-mono mt-1">
-                    <span>Rate: <strong className="text-white">${item.dailyRate}/day</strong></span>
-                    <span>Deposit: <strong className="text-[#F27D26]">${item.securityDeposit}</strong></span>
+                    <span>Rate: <strong className="text-white">₹{item.dailyRate}/day</strong></span>
+                    <span>Deposit: <strong className="text-[#F27D26]">₹{item.securityDeposit}</strong></span>
                   </div>
                 </div>
               </div>
