@@ -105,9 +105,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 285,
     weeklyRate: 1400,
     securityDeposit: 500,
-    location: 'Austin, TX',
-    lat: 30.2672,
-    lng: -97.7431,
+    location: 'Mumbai, MH',
+    lat: 19.0760,
+    lng: 72.8777,
     images: [
       'https://images.unsplash.com/photo-1579412690850-bd41cd0af397?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1000'
@@ -139,9 +139,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 320,
     weeklyRate: 1650,
     securityDeposit: 600,
-    location: 'Round Rock, TX',
-    lat: 30.5083,
-    lng: -97.6789,
+    location: 'Bengaluru, KA',
+    lat: 12.9716,
+    lng: 77.5946,
     images: [
       'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1000'
@@ -173,9 +173,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 260,
     weeklyRate: 1250,
     securityDeposit: 500,
-    location: 'San Marcos, TX',
-    lat: 29.8833,
-    lng: -97.9414,
+    location: 'New Delhi, NCR',
+    lat: 28.6139,
+    lng: 77.2090,
     images: [
       'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1592417817098-8f3d6ef23a81?auto=format&fit=crop&q=80&w=1000'
@@ -207,9 +207,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 450,
     weeklyRate: 2200,
     securityDeposit: 1200,
-    location: 'San Francisco, CA',
-    lat: 37.7749,
-    lng: -122.4194,
+    location: 'Hyderabad, TS',
+    lat: 17.3850,
+    lng: 78.4867,
     images: [
       'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=1000'
@@ -241,9 +241,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 380,
     weeklyRate: 1850,
     securityDeposit: 1000,
-    location: 'San Jose, CA',
-    lat: 37.3382,
-    lng: -121.8863,
+    location: 'Chennai, TN',
+    lat: 13.0827,
+    lng: 80.2707,
     images: [
       'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&q=80&w=1000'
@@ -275,9 +275,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 520,
     weeklyRate: 2500,
     securityDeposit: 1000,
-    location: 'Oakland, CA',
-    lat: 37.8044,
-    lng: -122.2712,
+    location: 'Pune, MH',
+    lat: 18.5204,
+    lng: 73.8567,
     images: [
       'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000'
@@ -309,9 +309,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 180,
     weeklyRate: 850,
     securityDeposit: 400,
-    location: 'Austin, TX',
-    lat: 30.2500,
-    lng: -97.7000,
+    location: 'Ahmedabad, GJ',
+    lat: 23.0225,
+    lng: 72.5714,
     images: [
       'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1586191582152-32a8848d56a3?auto=format&fit=crop&q=80&w=1000'
@@ -343,9 +343,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 145,
     weeklyRate: 680,
     securityDeposit: 350,
-    location: 'Cedar Park, TX',
-    lat: 30.5052,
-    lng: -97.8203,
+    location: 'Kolkata, WB',
+    lat: 22.5726,
+    lng: 88.3639,
     images: [
       'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&q=80&w=1000'
@@ -377,9 +377,9 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     dailyRate: 210,
     weeklyRate: 980,
     securityDeposit: 600,
-    location: 'San Francisco, CA',
-    lat: 37.7833,
-    lng: -122.4167,
+    location: 'Jaipur, RJ',
+    lat: 26.9124,
+    lng: 75.7873,
     images: [
       'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=1000',
       'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000'

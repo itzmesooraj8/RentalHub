@@ -1,76 +1,157 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star, ArrowRight, X } from 'lucide-react';
+import L from 'leaflet';
 import { Equipment } from '../types';
 
 interface EquipmentMapProps {
   items: Equipment[];
 }
 
+// Indian Hub City Coordinates Fallback Matrix
+const INDIA_CITY_COORDINATES: Record<string, [number, number]> = {
+  mumbai: [19.0760, 72.8777],
+  bengaluru: [12.9716, 77.5946],
+  bangalore: [12.9716, 77.5946],
+  delhi: [28.6139, 77.2090],
+  hyderabad: [17.3850, 78.4867],
+  chennai: [13.0827, 80.2707],
+  pune: [18.5204, 73.8567],
+  ahmedabad: [23.0225, 72.5714],
+  kolkata: [22.5726, 88.3639],
+  jaipur: [26.9124, 75.7873],
+};
+
+const DEFAULT_INDIA_POSITIONS: [number, number][] = [
+  [19.0760, 72.8777], // Mumbai
+  [12.9716, 77.5946], // Bengaluru
+  [28.6139, 77.2090], // Delhi
+  [17.3850, 78.4867], // Hyderabad
+  [13.0827, 80.2707], // Chennai
+  [18.5204, 73.8567], // Pune
+  [23.0225, 72.5714], // Ahmedabad
+  [22.5726, 88.3639], // Kolkata
+  [26.9124, 75.7873], // Jaipur
+];
+
+function getEquipmentIndiaCoords(eq: Equipment, index: number): [number, number] {
+  if (eq.lat && eq.lng && eq.lat > 5 && eq.lat < 36 && eq.lng > 68 && eq.lng < 98) {
+    return [eq.lat, eq.lng];
+  }
+  const locLower = (eq.location || '').toLowerCase();
+  for (const [city, coords] of Object.entries(INDIA_CITY_COORDINATES)) {
+    if (locLower.includes(city)) {
+      return coords;
+    }
+  }
+  return DEFAULT_INDIA_POSITIONS[index % DEFAULT_INDIA_POSITIONS.length];
+}
+
 export const EquipmentMap: React.FC<EquipmentMapProps> = ({ items }) => {
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
   const [selectedPin, setSelectedPin] = useState<Equipment | null>(items[0] || null);
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    // Initialize Leaflet Map centered on India (20.5937, 78.9629)
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        center: [20.5937, 78.9629],
+        zoom: 5,
+        zoomControl: true,
+        scrollWheelZoom: false,
+      });
+
+      // CartoDB Dark Matter OpenStreetMap Tile Layer
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 18,
+        subdomains: 'abcd',
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
+    }
+
+    const map = mapInstanceRef.current;
+
+    // Clear existing markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    // Render interactive pins on India Map
+    items.forEach((eq, idx) => {
+      const coords = getEquipmentIndiaCoords(eq, idx);
+      const isSelected = selectedPin?.id === eq.id;
+
+      const customIcon = L.divIcon({
+        className: 'custom-leaflet-marker',
+        html: `<div style="
+          background-color: ${isSelected ? '#F27D26' : '#111111'};
+          color: ${isSelected ? '#000000' : '#ffffff'};
+          border: 1px solid ${isSelected ? '#ffffff' : '#333333'};
+          padding: 4px 10px;
+          border-radius: 9999px;
+          font-family: monospace;
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        ">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span>₹${eq.dailyRate}/d</span>
+        </div>`,
+        iconSize: [80, 28],
+        iconAnchor: [40, 14],
+      });
+
+      const marker = L.marker(coords, { icon: customIcon }).addTo(map);
+      marker.on('click', () => {
+        setSelectedPin(eq);
+        map.panTo(coords, { animate: true });
+      });
+
+      markersRef.current.push(marker);
+    });
+
+    return () => {
+      // Map cleanup on unmount
+    };
+  }, [items, selectedPin?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="w-full h-[520px] rounded-2xl bg-[#0A0A0A] border border-[#1F1F1F] relative overflow-hidden flex flex-col justify-between p-4 shadow-2xl">
       {/* Map Header Overlay */}
-      <div className="z-10 bg-[#111111]/90 backdrop-blur-md p-3 rounded-xl border border-[#1F1F1F] flex items-center justify-between text-white">
+      <div className="z-20 bg-[#111111]/90 backdrop-blur-md p-3 rounded-xl border border-[#1F1F1F] flex items-center justify-between text-white pointer-events-auto">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-[#F27D26] animate-pulse"></div>
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#F27D26]">Live Regional Equipment Map</span>
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#F27D26]">Live OpenStreetMap India Regional Hubs</span>
         </div>
-        <span className="text-xs font-mono text-[#888888]">{items.length} verified items located in area</span>
+        <span className="text-xs font-mono text-[#888888]">{items.length} verified Indian machinery assets</span>
       </div>
 
-      {/* Simulated Interactive Vector Map Canvas */}
-      <div className="absolute inset-0 z-0 bg-[#0A0A0A] overflow-hidden">
-        {/* Background Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1F1F1F_1px,transparent_1px),linear-gradient(to_bottom,#1F1F1F_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40"></div>
-
-        {/* Visual Simulated Map Roads/Land */}
-        <svg className="absolute inset-0 w-full h-full text-[#1A1A1A] stroke-[#333333]/60" fill="none">
-          <path d="M 50 150 Q 250 100 450 250 T 850 180" strokeWidth="3" />
-          <path d="M 120 380 Q 380 280 650 350 T 900 300" strokeWidth="2" strokeDasharray="4 4" />
-          <circle cx="300" cy="220" r="140" fill="currentColor" fillOpacity="0.1" />
-          <circle cx="700" cy="300" r="180" fill="currentColor" fillOpacity="0.1" />
-        </svg>
-
-        {/* Dynamic Interactive Pins */}
-        {items.map((eq, idx) => {
-          // Calculate relative position based on index / lat lng spread for visual demo
-          const positions = [
-            { top: '35%', left: '28%' },
-            { top: '60%', left: '42%' },
-            { top: '25%', left: '68%' },
-            { top: '70%', left: '75%' },
-            { top: '48%', left: '85%' },
-          ];
-          const pos = positions[idx % positions.length];
-          const isSelected = selectedPin?.id === eq.id;
-
-          return (
-            <div
-              key={eq.id}
-              style={{ top: pos.top, left: pos.left }}
-              className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300"
-              onClick={() => setSelectedPin(eq)}
-            >
-              {/* Pin Badge */}
-              <div className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold transition-all transform flex items-center gap-1 shadow-lg border ${
-                isSelected
-                  ? 'bg-[#F27D26] text-black border-white scale-110 ring-4 ring-[#F27D26]/30'
-                  : 'bg-[#111111] hover:bg-[#1A1A1A] text-white border-[#333333] hover:scale-105'
-              }`}>
-                <MapPin className="w-3.5 h-3.5" />
-                <span>₹{eq.dailyRate}/d</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Real OpenStreetMap Container */}
+      <div ref={mapContainerRef} className="absolute inset-0 z-0 bg-[#0A0A0A]" />
 
       {/* Selected Item Quick View Overlay Card */}
       {selectedPin && (
-        <div className="z-30 bg-[#111111]/95 backdrop-blur-md border border-[#1F1F1F] rounded-2xl p-4 text-white max-w-sm ml-auto shadow-2xl relative">
+        <div className="z-30 bg-[#111111]/95 backdrop-blur-md border border-[#1F1F1F] rounded-2xl p-4 text-white max-w-sm ml-auto shadow-2xl relative mt-auto font-mono">
           <button
             onClick={() => setSelectedPin(null)}
             className="absolute top-3 right-3 text-[#888888] hover:text-white p-1 rounded-full hover:bg-[#1A1A1A] cursor-pointer"
