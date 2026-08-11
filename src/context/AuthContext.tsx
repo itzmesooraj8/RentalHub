@@ -8,10 +8,13 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   loginRole: (role: UserRole) => Promise<void>;
+  login: (email: string, password?: string) => Promise<User>;
+  register: (data: { name: string; email: string; password?: string; role?: UserRole; phone?: string; location?: string }) => Promise<User>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
   toggleFavorite: (equipmentId: string) => void;
   updateUser: (updates: Partial<User>) => void;
+  setCurrentUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +49,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginRole = async (targetRole: UserRole) => {
     const res = await authService.loginWithRole(targetRole);
     setCurrentUser(res.user);
+  };
+
+  const login = async (email: string, password?: string) => {
+    const res = await authService.login(email, password);
+    setCurrentUser(res.user);
+    return res.user;
+  };
+
+  const register = async (data: { name: string; email: string; password?: string; role?: UserRole; phone?: string; location?: string }) => {
+    const res = await authService.register(data);
+    setCurrentUser(res.user);
+    return res.user;
   };
 
   const logout = () => {
@@ -86,10 +101,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         loading,
         loginRole,
+        login,
+        register,
         logout,
         switchRole,
         toggleFavorite,
         updateUser,
+        setCurrentUser,
       }}
     >
       {children}

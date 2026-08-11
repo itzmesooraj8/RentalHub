@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, UserPlus, Database, Key, Terminal, Code, Wrench, ShieldCheck } from 'lucide-react';
+import { LogIn, UserPlus, Database, Key, Terminal, Code, Wrench, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { TrustScoreBadge } from '../components/TrustScoreBadge';
+import { useAuth } from '../context/AuthContext';
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
@@ -11,44 +12,47 @@ interface AuthPageProps {
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, currentUser }) => {
   const navigate = useNavigate();
+  const { login, register, loginRole } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [showPipeline, setShowPipeline] = useState(false);
 
   // Form Fields
   const [email, setEmail] = useState('aarav@heavyrentals.in');
-  const [password, setPassword] = useState('••••••••••••');
+  const [password, setPassword] = useState('password123');
   const [companyName, setCompanyName] = useState('Aarav Heavy Infra Pvt Ltd');
   const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
   const [licenseNumber, setLicenseNumber] = useState('MH-EXC-992014');
   const [pipelineOutput, setPipelineOutput] = useState<string | null>(null);
   const [isExecutingPipeline, setIsExecutingPipeline] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quick Demo User Profiles
   const demoAccounts: User[] = [
     {
-      id: 'usr-101',
-      name: 'Aarav Sharma',
-      email: 'aarav@heavyrentals.in',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
+      id: 'usr_cust_1',
+      name: 'Ananya Iyer',
+      email: 'ananya.i@contracting.in',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300',
       role: 'customer',
-      trustScore: 96,
+      trustScore: 99,
       kycVerified: true,
       memberSince: 'March 2024',
     },
     {
-      id: 'usr-202',
-      name: 'Summit Fleet Operations',
-      email: 'fleet@summitheavy.com',
-      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=300',
+      id: 'usr_owner_1',
+      name: 'Aarav Sharma',
+      email: 'aarav@heavyrentals.in',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
       role: 'owner',
       trustScore: 98,
       kycVerified: true,
       memberSince: 'January 2023',
     },
     {
-      id: 'usr-303',
-      name: 'System Admin Officer',
-      email: 'admin@rentalhub.io',
+      id: 'usr_admin_1',
+      name: 'Super Admin',
+      email: 'admin@rentalhub.com',
       avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300',
       role: 'admin',
       trustScore: 100,
@@ -94,30 +98,54 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, currentUser }) => {
   }
 ])`;
 
-  const handleSelectDemoUser = (user: User) => {
-    onLogin(user);
-    if (user.role === 'customer') navigate('/dashboard/customer');
-    else if (user.role === 'owner') navigate('/dashboard/owner');
-    else navigate('/dashboard/admin');
+  const handleSelectDemoUser = async (user: User) => {
+    try {
+      setIsSubmitting(true);
+      setAuthError(null);
+      await loginRole(user.role);
+      onLogin(user);
+      if (user.role === 'customer') navigate('/dashboard/customer');
+      else if (user.role === 'owner') navigate('/dashboard/owner');
+      else navigate('/dashboard/admin');
+    } catch (err: any) {
+      setAuthError(err?.message || 'Demo sign-in failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newUser: User = {
-      id: `usr-${Date.now().toString().slice(-4)}`,
-      name: companyName || email.split('@')[0],
-      email: email,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300',
-      role: selectedRole,
-      trustScore: 96,
-      kycVerified: true,
-      memberSince: 'August 2026',
-    };
+    setIsSubmitting(true);
+    setAuthError(null);
 
-    onLogin(newUser);
-    if (selectedRole === 'customer') navigate('/dashboard/customer');
-    else if (selectedRole === 'owner') navigate('/dashboard/owner');
-    else navigate('/dashboard/admin');
+    const actualPassword = password === '••••••••••••' ? 'password123' : password;
+
+    try {
+      let authenticatedUser: User;
+
+      if (activeTab === 'login') {
+        authenticatedUser = await login(email, actualPassword);
+      } else {
+        authenticatedUser = await register({
+          name: companyName || email.split('@')[0],
+          email,
+          password: actualPassword,
+          role: selectedRole,
+          phone: '+91 98110 54321',
+          location: 'Mumbai, MH',
+        });
+      }
+
+      onLogin(authenticatedUser);
+      if (authenticatedUser.role === 'customer') navigate('/dashboard/customer');
+      else if (authenticatedUser.role === 'owner') navigate('/dashboard/owner');
+      else navigate('/dashboard/admin');
+    } catch (err: any) {
+      setAuthError(err?.message || (activeTab === 'login' ? 'Authentication failed. Invalid email or password.' : 'Account registration failed. Email may already be registered.'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleTestPipeline = () => {
@@ -234,6 +262,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, currentUser }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs font-mono">
+          {authError && (
+            <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs flex items-start gap-2 font-mono">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{authError}</span>
+            </div>
+          )}
+
           <div>
             <label className="font-bold text-[#888888] block mb-1 uppercase tracking-wider">Email Address</label>
             <input
@@ -299,10 +334,20 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, currentUser }) => {
 
           <button
             type="submit"
-            className="w-full py-3.5 px-4 rounded-xl bg-[#F27D26] hover:bg-[#d96a1a] text-black font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-lg flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className="w-full py-3.5 px-4 rounded-xl bg-[#F27D26] hover:bg-[#d96a1a] text-black font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Key className="w-4 h-4" />
-            <span>{activeTab === 'login' ? 'Authenticate Account' : 'Create KYC Verified Account'}</span>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Authenticating with MongoDB Atlas...</span>
+              </>
+            ) : (
+              <>
+                <Key className="w-4 h-4" />
+                <span>{activeTab === 'login' ? 'Authenticate Account' : 'Create KYC Verified Account'}</span>
+              </>
+            )}
           </button>
         </form>
 

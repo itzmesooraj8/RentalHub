@@ -135,7 +135,7 @@ function AppRoutes() {
               path="/auth"
               element={
                 <PublicOnlyRoute user={currentUser}>
-                  <AuthPage onLogin={loginRole} currentUser={currentUser} />
+                  <AuthPage onLogin={(user) => {}} currentUser={currentUser} />
                 </PublicOnlyRoute>
               }
             />

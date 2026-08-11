@@ -3,13 +3,20 @@ import { User, UserRole } from '../types';
 
 export const authService = {
   async register(data: { name: string; email: string; password?: string; role?: UserRole; phone?: string; location?: string }): Promise<{ user: User; token: string }> {
-    const res = await apiClient.post<{ success: boolean; data: { user: User; token: string } }>('/api/auth/register', data);
+    const payload = {
+      ...data,
+      password: data.password || 'password123',
+    };
+    const res = await apiClient.post<{ success: boolean; data: { user: User; token: string } }>('/api/auth/register', payload);
     localStorage.setItem('rentalhub_token', res.data.data.token);
     return res.data.data;
   },
 
-  async login(email: string, role?: UserRole): Promise<{ user: User; token: string }> {
-    const res = await apiClient.post<{ success: boolean; data: { user: User; token: string } }>('/api/auth/login', { email, role });
+  async login(email: string, password?: string): Promise<{ user: User; token: string }> {
+    const res = await apiClient.post<{ success: boolean; data: { user: User; token: string } }>('/api/auth/login', {
+      email,
+      password: password || 'password123',
+    });
     localStorage.setItem('rentalhub_token', res.data.data.token);
     return res.data.data;
   },
