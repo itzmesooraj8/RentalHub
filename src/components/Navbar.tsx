@@ -9,7 +9,6 @@ import {
   User as UserIcon,
   Bookmark,
   LayoutDashboard,
-  ShieldCheck,
   Menu,
   X,
   ChevronDown,
@@ -21,26 +20,23 @@ import {
   Bell,
   CheckSquare,
 } from 'lucide-react';
-import { User, UserRole } from '../types';
+import { UserRole } from '../types';
 import { ROUTES } from '../lib/routes';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
-  currentUser: User | null;
-  onLogout?: () => void;
-  onSwitchRole?: (role: UserRole) => void;
   favoritesCount?: number;
   notificationsCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  currentUser,
-  onLogout,
-  onSwitchRole,
   favoritesCount = 0,
   notificationsCount = 0,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentUser, switchRole, logout } = useAuth();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
@@ -83,24 +79,30 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = getNavLinks();
 
+  // Route group active detection
   const isLinkActive = (path: string) => {
-    if (path.includes('?')) {
-      return location.pathname + location.search === path;
+    const currentFull = location.pathname + location.search;
+
+    if (path === ROUTES.browseMap) {
+      return currentFull.includes('view=map');
+    }
+    if (path === ROUTES.browse) {
+      return location.pathname === '/browse' && !currentFull.includes('view=map');
     }
     if (path === '/') return location.pathname === '/';
-    return location.pathname === path;
+    return location.pathname.startsWith(path);
   };
 
   const handleLogout = () => {
-    if (onLogout) onLogout();
+    logout();
     setIsUserMenuOpen(false);
     navigate(ROUTES.auth);
   };
 
   return (
-    <header className="sticky top-3 z-50 max-w-7xl mx-auto my-2 px-3 sm:px-4 py-2.5 rounded-2xl md:rounded-full bg-[#0D0D0D]/90 backdrop-blur-xl border border-[#222222] shadow-[0_10px_30px_rgba(0,0,0,0.8)] text-white transition-all duration-300">
+    <header className="sticky top-3 z-50 max-w-7xl mx-auto my-2 px-3 sm:px-4 py-2.5 rounded-2xl md:rounded-full bg-[#0D0D0D]/90 backdrop-blur-xl border border-[#222222] shadow-[0_10px_30px_rgba(0,0,0,0.8)] text-white transition-all duration-300 font-sans">
       <div className="flex items-center justify-between gap-2">
-        {/* Logo */}
+        {/* Brand Logo */}
         <Link to="/" className="flex items-center gap-2 group shrink-0 pl-1">
           <div className="w-8 h-8 rounded-xl bg-[#1A1A1A] border border-[#333333] flex items-center justify-center text-[#F27D26] group-hover:scale-105 transition-transform duration-200">
             <Wrench className="w-4 h-4" />
@@ -119,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-200 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1.5 transition-all duration-200 ${
                   active
                     ? 'bg-[#F27D26] text-black shadow-[0_0_12px_rgba(242,125,38,0.3)]'
                     : 'text-[#888888] hover:text-white hover:bg-[#1C1C1C]'
@@ -129,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>{link.label}</span>
                 {link.badge !== undefined && link.badge > 0 && (
                   <span
-                    className={`px-1.5 py-0.2 text-[9px] rounded-full font-bold ${
+                    className={`px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold ${
                       active ? 'bg-black text-white' : 'bg-[#F27D26] text-black'
                     }`}
                   >
@@ -141,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </nav>
 
-        {/* User Menu / Auth Button */}
+        {/* Right User Menu / Login Action */}
         <div className="flex items-center gap-2 shrink-0">
           {currentUser ? (
             <div className="relative">
@@ -154,21 +156,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   alt={currentUser.name}
                   className="w-6 h-6 rounded-full object-cover border border-[#333333]"
                 />
-                <span className="text-xs font-mono font-bold text-white max-w-[90px] truncate hidden sm:inline">
+                <span className="text-xs font-semibold text-white max-w-[90px] truncate hidden sm:inline">
                   {currentUser.name.split(' ')[0]}
                 </span>
-                <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-[#1F1F1F] text-[#F27D26] border border-[#333333]">
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-[#1F1F1F] text-[#F27D26] border border-[#333333]">
                   {currentUser.role}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-[#888888]" />
               </button>
 
-              {/* User Dropdown */}
+              {/* Dropdown Menu */}
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-[#111111] border border-[#222222] rounded-2xl shadow-2xl p-2 space-y-1 font-mono text-xs z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-56 bg-[#111111] border border-[#222222] rounded-2xl shadow-2xl p-2 space-y-1 text-xs z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
                   <div className="px-3 py-2 border-b border-[#222222]">
                     <div className="font-bold text-white truncate">{currentUser.name}</div>
-                    <div className="text-[10px] text-[#888888] truncate">{currentUser.email}</div>
+                    <div className="text-[11px] text-[#888888] truncate">{currentUser.email}</div>
                   </div>
 
                   <Link
@@ -189,18 +191,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Workspace Dashboard</span>
                   </Link>
 
-                  {/* Isolated Hackathon Demo Persona Switcher */}
-                  {onSwitchRole && (
+                  {/* Demo Role Switcher Gated */}
+                  {switchRole && (
                     <div className="pt-2 border-t border-[#222222] space-y-1">
-                      <div className="px-3 text-[9px] text-[#666666] uppercase font-bold tracking-wider">
-                        Demo Account Switch:
+                      <div className="px-3 text-[10px] text-[#666666] font-mono font-bold uppercase tracking-wider">
+                        Demo Role Switch:
                       </div>
-                      <div className="grid grid-cols-3 gap-1 px-2">
+                      <div className="grid grid-cols-3 gap-1 px-2 font-mono">
                         {(['customer', 'owner', 'admin'] as UserRole[]).map((r) => (
                           <button
                             key={r}
                             onClick={() => {
-                              onSwitchRole(r);
+                              switchRole(r);
                               setIsUserMenuOpen(false);
                             }}
                             className={`py-1 text-[9px] uppercase font-bold rounded-lg border transition cursor-pointer ${
@@ -218,7 +220,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition mt-1 pt-2 border-t border-[#222222] cursor-pointer text-left"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition mt-1 pt-2 border-t border-[#222222] cursor-pointer text-left font-sans"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Sign Out</span>
@@ -229,7 +231,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <Link
               to={ROUTES.auth}
-              className="px-4 py-1.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 bg-[#F27D26] hover:bg-[#d96a1a] text-black transition-all duration-200 cursor-pointer shadow-md"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1.5 bg-[#F27D26] hover:bg-[#d96a1a] text-black transition-all duration-200 cursor-pointer shadow-md"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Log In</span>
@@ -246,9 +248,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Menu Drawer */}
+      {/* Mobile Drawer */}
       {isMobileMenuOpen && (
-        <div className="md:hidden mt-3 pt-3 border-t border-[#222222] space-y-1.5 font-mono text-xs">
+        <div className="md:hidden mt-3 pt-3 border-t border-[#222222] space-y-1.5 text-xs font-sans">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const active = isLinkActive(link.path);
@@ -258,7 +260,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 to={link.path}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center justify-between p-3 rounded-xl transition ${
-                  active ? 'bg-[#F27D26] text-black font-bold' : 'bg-[#141414] text-[#888888]'
+                  active ? 'bg-[#F27D26] text-black font-semibold' : 'bg-[#141414] text-[#888888]'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -266,7 +268,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>{link.label}</span>
                 </div>
                 {link.badge !== undefined && link.badge > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-black text-white text-[10px]">
+                  <span className="px-2 py-0.5 rounded-full bg-black text-white text-[10px] font-mono">
                     {link.badge}
                   </span>
                 )}

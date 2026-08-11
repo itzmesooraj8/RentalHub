@@ -5,7 +5,7 @@ import { ROUTES } from '../lib/routes';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-[#050505] text-[#666666] text-xs border-t border-[#1F1F1F] pt-12 pb-8 font-mono">
+    <footer className="bg-[#050505] text-[#666666] text-xs border-t border-[#1F1F1F] pt-12 pb-8 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Col 1 */}
@@ -23,13 +23,13 @@ export const Footer: React.FC = () => {
             </p>
             <div className="flex items-center gap-2 text-[#F27D26] font-medium text-xs">
               <Leaf className="w-4 h-4 text-[#F27D26]" />
-              <span>ESG Commitment: Over 12,400 kg CO₂ Saved</span>
+              <span>ESG Commitment: Environmental Offset Estimation</span>
             </div>
           </div>
 
           {/* Col 2 */}
           <div>
-            <h5 className="text-[#999999] font-bold mb-3 text-[10px] tracking-widest uppercase font-mono">Marketplace</h5>
+            <h5 className="text-[#999999] font-bold mb-3 text-[11px] tracking-wider uppercase font-mono">Marketplace</h5>
             <ul className="space-y-2 text-[#888888]">
               <li><Link to={ROUTES.browseCategory('Heavy Machinery')} className="hover:text-[#F27D26] transition">Heavy Machinery</Link></li>
               <li><Link to={ROUTES.browseCategory('Power Tools')} className="hover:text-[#F27D26] transition">Power Tools & Drills</Link></li>
@@ -41,10 +41,10 @@ export const Footer: React.FC = () => {
 
           {/* Col 3 */}
           <div>
-            <h5 className="text-[#999999] font-bold mb-3 text-[10px] tracking-widest uppercase font-mono">For Owners</h5>
+            <h5 className="text-[#999999] font-bold mb-3 text-[11px] tracking-wider uppercase font-mono">For Owners</h5>
             <ul className="space-y-2 text-[#888888]">
-              <li><Link to={ROUTES.ownerEquipment} className="hover:text-[#F27D26] transition">List & Manage Fleet</Link></li>
-              <li><Link to={ROUTES.ownerAnalytics} className="hover:text-[#F27D26] transition">AI Dynamic Pricing Tool</Link></li>
+              <li><Link to={ROUTES.ownerEquipment} className="hover:text-[#F27D26] transition">Fleet Equipment Management</Link></li>
+              <li><Link to={ROUTES.ownerAnalytics} className="hover:text-[#F27D26] transition">AI-Assisted Pricing Recommendation Preview</Link></li>
               <li><Link to={ROUTES.profile} className="hover:text-[#F27D26] transition">Identity Verification</Link></li>
               <li><Link to={ROUTES.favorites} className="hover:text-[#F27D26] transition">Saved Equipment Assets</Link></li>
             </ul>
@@ -52,7 +52,7 @@ export const Footer: React.FC = () => {
 
           {/* Col 4 */}
           <div>
-            <h5 className="text-[#999999] font-bold mb-3 text-[10px] tracking-widest uppercase font-mono">Trust & Safety</h5>
+            <h5 className="text-[#999999] font-bold mb-3 text-[11px] tracking-wider uppercase font-mono">Trust & Governance</h5>
             <div className="space-y-2.5">
               <div className="flex items-start gap-2 text-[#888888]">
                 <ShieldCheck className="w-4 h-4 text-[#F27D26] shrink-0 mt-0.5" />
@@ -60,7 +60,7 @@ export const Footer: React.FC = () => {
               </div>
               <div className="flex items-start gap-2 text-[#888888]">
                 <Lock className="w-4 h-4 text-[#F27D26] shrink-0 mt-0.5" />
-                <span>Secure Escrow & Security Deposits</span>
+                <span>Security Deposit Hold Workflow</span>
               </div>
               <div className="flex items-start gap-2 text-[#888888]">
                 <CheckCircle2 className="w-4 h-4 text-[#F27D26] shrink-0 mt-0.5" />
