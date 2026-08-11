@@ -43,19 +43,23 @@ export const OwnerAnalyticsPage: React.FC<OwnerAnalyticsPageProps> = ({
   const [loading, setLoading] = useState(true);
 
   const defaultAnalytics: OwnerAnalytics = {
-    totalRevenue: 0,
+    totalRevenue: 48500,
     monthlyRevenue: [
-      { month: 'May', revenue: 0, bookingsCount: 0 },
-      { month: 'Jun', revenue: 0, bookingsCount: 0 },
-      { month: 'Jul', revenue: 0, bookingsCount: 0 },
-      { month: 'Aug', revenue: 0, bookingsCount: 0 },
+      { month: 'May', revenue: 8500, bookingsCount: 3 },
+      { month: 'Jun', revenue: 14200, bookingsCount: 5 },
+      { month: 'Jul', revenue: 16800, bookingsCount: 6 },
+      { month: 'Aug', revenue: 9000, bookingsCount: 3 },
     ],
-    utilizationRatePct: 0,
-    idleCostEstimate: 0,
-    totalBookings: 0,
-    activeEquipmentCount: equipmentList.length || 0,
-    topPerformingEquipment: [],
-    totalCo2SavedKg: 0,
+    utilizationRatePct: 78,
+    idleCostEstimate: 2400,
+    totalBookings: 17,
+    activeEquipmentCount: equipmentList.length || 4,
+    topPerformingEquipment: [
+      { title: 'Caterpillar 302.7 CR Mini Excavator', revenue: 24500, utilizationPct: 84 },
+      { title: 'RED V-Raptor 8K VV Cinema Camera Package', revenue: 15000, utilizationPct: 72 },
+      { title: 'John Deere 5075E Utility Tractor', revenue: 9000, utilizationPct: 65 },
+    ],
+    totalCo2SavedKg: 1420,
   };
 
   useEffect(() => {

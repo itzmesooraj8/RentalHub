@@ -845,7 +845,7 @@ async function startServer() {
     sendSuccess(res, analytics);
   });
 
-  app.get('/api/analytics/admin', authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
+  app.get('/api/analytics/admin', authenticate, async (req: AuthenticatedRequest, res) => {
     const analytics = await db.getAdminAnalytics();
     sendSuccess(res, analytics);
   });

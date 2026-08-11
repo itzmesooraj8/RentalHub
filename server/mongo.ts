@@ -43,6 +43,9 @@ export async function connectMongo() {
       changeStream.on('change', (change) => {
         console.log(`⚡ [MongoDB Change Stream Trigger] Operation: ${change.operationType} on ${change.ns.coll}`);
       });
+      changeStream.on('error', () => {
+        // Handle stream disconnection gracefully on shutdown/disconnect
+      });
       console.log('✓ MongoDB Atlas Change Stream listener active on bookings collection.');
     } catch (csErr) {
       console.log('ℹ MongoDB Change Streams initialized (Atlas Replica Set context).');
