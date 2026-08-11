@@ -37,9 +37,14 @@ async function runBackendTests() {
     console.log('[TEST 4] Testing Concurrent Double-Booking Conflict Prevention...');
     const targetEq = nearbyEquipment[0] || (await db.getEquipment())[0];
 
-    const uniqueDay = Math.floor(Math.random() * 1000) + 10;
-    const testStartDate = `2028-05-${String(uniqueDay % 28 + 1).padStart(2, '0')}`;
-    const testEndDate = `2028-05-${String(uniqueDay % 28 + 3).padStart(2, '0')}`;
+    // Clean up previous test bookings to ensure idempotent test execution
+    const { BookingModel } = await import('../server/models/Booking');
+    const { AvailabilityBlockModel } = await import('../server/models/AvailabilityBlock');
+    await BookingModel.deleteMany({ id: { $regex: '^bk_test_' } });
+    await AvailabilityBlockModel.deleteMany({ bookingId: { $regex: '^bk_test_' } });
+
+    const testStartDate = `2029-01-10`;
+    const testEndDate = `2029-01-15`;
 
     const bookingAttempt1: Booking = {
       id: `bk_test_${Date.now()}_1`,
