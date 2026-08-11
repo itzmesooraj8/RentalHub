@@ -121,8 +121,9 @@ async function runBackendTests() {
       startDate: testStartDate,
       endDate: testEndDate,
     });
+    const availableList = Array.isArray(availableEquipment) ? availableEquipment : availableEquipment.items;
 
-    const containsReservedAsset = availableEquipment.some((e) => e.id === targetEq.id);
+    const containsReservedAsset = availableList.some((e) => e.id === targetEq.id);
     if (!containsReservedAsset) {
       console.log(`✓ PASSED: Date-filtered search successfully excluded reserved asset "${targetEq.title}" for interval ${testStartDate}..${testEndDate}.\n`);
     } else {

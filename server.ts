@@ -103,16 +103,48 @@ async function startServer() {
       return sendError(res, 'VALIDATION_ERROR', 'imageBase64 payload is required.');
     }
 
-    // Process base64 data-URI payload
+    // Validate file size (< 7MB Base64 string ~= 5MB raw file)
+    if (imageBase64.length > 7 * 1024 * 1024) {
+      return sendError(res, 'FILE_TOO_LARGE', 'Uploaded file exceeds 5MB maximum size limit.');
+    }
+
+    // Validate MIME type header
+    const match = imageBase64.match(/^data:(image\/(jpeg|png|webp|gif)|application\/pdf);base64,/);
+    if (imageBase64.startsWith('data:') && !match) {
+      return sendError(res, 'UNSUPPORTED_MEDIA_TYPE', 'Only JPEG, PNG, WEBP, GIF, and PDF files are allowed.');
+    }
+
     const dataUrl = imageBase64.startsWith('data:')
       ? imageBase64
       : `data:image/jpeg;base64,${imageBase64}`;
 
     sendSuccess(res, {
       url: dataUrl,
-      filename: filename || `asset_${Date.now()}.jpg`,
+      filename: filename ? filename.replace(/[^a-zA-Z0-9_.-]/g, '_') : `asset_${Date.now()}.jpg`,
       uploadedAt: new Date().toISOString(),
     });
+  });
+
+  // --- EQUIPMENT SEARCH & CATALOG ENDPOINTS ---
+  app.get('/api/equipment', async (req, res) => {
+    const { category, industry, search, minPrice, maxPrice, startDate, endDate, onlyAvailable, sort, ownerId, page, limit } = req.query;
+
+    const items = await db.getEquipment({
+      category: category as string,
+      industry: industry as string,
+      search: search as string,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      startDate: startDate as string,
+      endDate: endDate as string,
+      onlyAvailable: onlyAvailable === 'true',
+      sort: sort as string,
+      ownerId: ownerId as string,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+
+    sendSuccess(res, items);
   });
 
   // --- AUTH ENDPOINTS ---
@@ -563,20 +595,23 @@ async function startServer() {
   app.post('/api/ai/smart-search', async (req, res) => {
     const { query, userLocation, role } = req.body;
     try {
-      const allEquipment = await db.getEquipment();
-      const aiResponse = await generateRentalAiAssistantResponse(query || 'Equipment rental request', allEquipment, role || 'customer');
+      const allEquipResult = await db.getEquipment();
+      const allEquipmentList = Array.isArray(allEquipResult) ? allEquipResult : allEquipResult.items;
 
-      const matchedEquipment = await db.getEquipment({
+      const aiResponse = await generateRentalAiAssistantResponse(query || 'Equipment rental request', allEquipmentList, role || 'customer');
+
+      const matchedResult = await db.getEquipment({
         search: query,
         lat: userLocation?.lat,
         lng: userLocation?.lng,
       });
+      const matchedList = Array.isArray(matchedResult) ? matchedResult : matchedResult.items;
 
       sendSuccess(res, {
         query,
         aiInterpretation: aiResponse,
-        resultsCount: matchedEquipment.length,
-        equipment: matchedEquipment,
+        resultsCount: matchedList.length,
+        equipment: matchedList,
       });
     } catch (e: any) {
       sendError(res, 'AI_ERROR', e?.message || 'Smart search failed.');

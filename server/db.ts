@@ -125,7 +125,9 @@ export class MongoDatabaseService {
     onlyAvailable?: boolean;
     sort?: string;
     ownerId?: string;
-  }): Promise<Equipment[]> {
+    page?: number;
+    limit?: number;
+  }): Promise<Equipment[] | { items: Equipment[]; page: number; limit: number; total: number; totalPages: number }> {
     try {
       const query: any = {};
       if (filters?.ownerId) query.ownerId = filters.ownerId;
@@ -155,6 +157,23 @@ export class MongoDatabaseService {
       if (filters?.sort === 'price_asc') sortOptions = { dailyRate: 1 };
       if (filters?.sort === 'price_desc') sortOptions = { dailyRate: -1 };
       if (filters?.sort === 'rating') sortOptions = { rating: -1 };
+
+      if (filters?.page || filters?.limit) {
+        const page = Number(filters.page || 1);
+        const limit = Number(filters.limit || 12);
+        const skip = (page - 1) * limit;
+
+        const total = await EquipmentModel.countDocuments(query);
+        const items = await EquipmentModel.find(query).sort(sortOptions).skip(skip).limit(limit).lean();
+
+        return {
+          items: items as unknown as Equipment[],
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 1,
+        };
+      }
 
       const items = await EquipmentModel.find(query).sort(sortOptions).lean();
       if (items.length) return items as unknown as Equipment[];
