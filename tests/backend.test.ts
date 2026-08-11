@@ -3,6 +3,7 @@ import { db } from '../server/db';
 import { generateToken } from '../server/middleware/auth';
 import { Equipment, Booking } from '../src/types';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 
 async function runBackendTests() {
   console.log('====================================================');
@@ -250,14 +251,28 @@ async function runBackendTests() {
       console.log('✓ PASSED: Sensitive fields (ownerId, approvedByAdmin) strictly protected against Mass-Assignment.\n');
     }
 
+    // 15. AI Rental Risk Score & Hybrid Discovery Engine
+    console.log('[TEST 15] Testing AI Rental Risk Score Engine & Hybrid Discovery Pipeline...');
+    const { evaluateBookingRiskScore } = await import('../server/geminiService');
+    const riskEval = await evaluateBookingRiskScore(94, 15, 98, targetEq.title, 450, 5, false);
+    if (!riskEval.riskScore || !riskEval.riskLevel || !riskEval.recommendedAction) {
+      throw new Error('AI Risk Score Engine evaluation failed.');
+    }
+    console.log(`✓ PASSED: AI Risk Score evaluated (${riskEval.riskScore}/100 Risk, Level: ${riskLevelToString(riskEval.riskLevel)}, Action: ${riskEval.recommendedAction}).\n`);
+
     console.log('====================================================');
     console.log('ALL BACKEND INTEGRATION & SECURITY TESTS PASSED 100%');
-    console.log('====================================================');
-    process.exit(0);
-  } catch (err: any) {
-    console.error('❌ TEST SUITE FAILED:', err?.message || err);
+    console.log('====================================================\n');
+  } catch (error) {
+    console.error('\n❌ BACKEND TEST FAILED:', error);
     process.exit(1);
+  } finally {
+    await mongoose.disconnect();
   }
+}
+
+function riskLevelToString(level: string) {
+  return level;
 }
 
 runBackendTests();

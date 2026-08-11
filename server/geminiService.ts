@@ -286,3 +286,48 @@ export async function analyzePreDispatchCondition(
     return fallback;
   }
 }
+
+export async function evaluateBookingRiskScore(
+  renterTrustScore: number,
+  renterCompletedRentals: number,
+  ownerTrustScore: number,
+  equipmentTitle: string,
+  dailyRate: number,
+  rentalDays: number,
+  hasDisputeHistory: boolean
+): Promise<{
+  riskScore: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  recommendedAction: 'SAFE_TO_CONFIRM' | 'MANUAL_REVIEW_REQUIRED' | 'REJECT_RESERVATION';
+  riskBreakdown: { factor: string; score: number; status: string }[];
+  explanation: string;
+}> {
+  const baseScore = Math.max(
+    0,
+    100 - (renterTrustScore * 0.4 + ownerTrustScore * 0.3 + Math.min(renterCompletedRentals * 2, 20))
+  );
+
+  const durationMultiplier = rentalDays > 14 ? 15 : rentalDays > 7 ? 8 : 0;
+  const disputePenalty = hasDisputeHistory ? 25 : 0;
+
+  const totalRiskScore = Math.min(99, Math.max(5, Math.round(baseScore + durationMultiplier + disputePenalty)));
+  const riskLevel = totalRiskScore < 30 ? 'LOW' : totalRiskScore < 65 ? 'MEDIUM' : 'HIGH';
+  const recommendedAction =
+    riskLevel === 'LOW' ? 'SAFE_TO_CONFIRM' : riskLevel === 'MEDIUM' ? 'MANUAL_REVIEW_REQUIRED' : 'REJECT_RESERVATION';
+
+  return {
+    riskScore: totalRiskScore,
+    riskLevel,
+    recommendedAction,
+    riskBreakdown: [
+      { factor: 'Renter Verification & Trust', score: renterTrustScore, status: renterTrustScore > 90 ? 'EXCELLENT' : 'MODERATE' },
+      { factor: 'Fleet Owner Reliability', score: ownerTrustScore, status: ownerTrustScore > 90 ? 'EXCELLENT' : 'GOOD' },
+      { factor: 'Rental Duration Anomaly', score: Math.max(0, 100 - durationMultiplier * 4), status: rentalDays <= 7 ? 'NORMAL' : 'EXTENDED_RENTAL' },
+      { factor: 'Dispute & Damage History', score: hasDisputeHistory ? 50 : 100, status: hasDisputeHistory ? 'PREVIOUS_DISPUTE' : 'CLEAN_RECORD' },
+    ],
+    explanation:
+      riskLevel === 'LOW'
+        ? `Booking is classified as LOW RISK (${totalRiskScore}/100). Verified renter trust score (${renterTrustScore}%) and clean damage history allow instant automated escrow locking.`
+        : `Booking is classified as ${riskLevel} RISK (${totalRiskScore}/100). Longer rental duration (${rentalDays} days) or past dispute indicators require manual owner sign-off.`,
+  };
+}

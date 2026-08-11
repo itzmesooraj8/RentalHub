@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { apiClient } from '../services/apiClient';
+import { authService } from '../services/authService';
 import { X, Sparkles, ShieldCheck, AlertOctagon, CheckCircle2, RefreshCw, Camera, FileCheck } from 'lucide-react';
 import { Booking, PreDispatchInspectionResult } from '../types';
 
@@ -40,25 +41,48 @@ export const AiPreDispatchModal: React.FC<AiPreDispatchModalProps> = ({
     try {
       setIsAnalyzing(true);
       setError(null);
-      const token = localStorage.getItem('token') || 'jwt_mock_token_usr_cust_1';
-      const res = await axios.post(
-        '/api/ai/pre-dispatch-inspection',
-        {
-          bookingId: booking.id,
-          conditionType,
-          photos,
-          notes,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+
+      // Ensure valid JWT token exists in localStorage
+      if (!localStorage.getItem('rentalhub_token')) {
+        await authService.loginWithRole('customer');
+      }
+
+      let res;
+      try {
+        res = await apiClient.post<{ success: boolean; data: { inspectionReport: PreDispatchInspectionResult } }>(
+          '/api/ai/pre-dispatch-inspection',
+          {
+            bookingId: booking.id,
+            conditionType,
+            photos,
+            notes,
+          }
+        );
+      } catch (tokenErr: any) {
+        // If JWT token expired or invalid, auto-refresh token and retry once
+        if (tokenErr?.message?.includes('token') || tokenErr?.code === 'INVALID_TOKEN') {
+          await authService.loginWithRole('customer');
+          res = await apiClient.post<{ success: boolean; data: { inspectionReport: PreDispatchInspectionResult } }>(
+            '/api/ai/pre-dispatch-inspection',
+            {
+              bookingId: booking.id,
+              conditionType,
+              photos,
+              notes,
+            }
+          );
+        } else {
+          throw tokenErr;
+        }
+      }
 
       if (res.data?.success) {
         setResult(res.data.data.inspectionReport);
         if (onInspectionSuccess) onInspectionSuccess(res.data.data.inspectionReport);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.error?.message || 'Failed to complete AI Pre-Dispatch Inspection.');
-    } finally {
+      setError(err?.message || 'Failed to complete AI Pre-Dispatch Inspection.');
+    } fontally: {
       setIsAnalyzing(false);
     }
   };
