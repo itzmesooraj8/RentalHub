@@ -10,13 +10,21 @@ import { User, UserRole } from './src/types';
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
 
   // Connect to MongoDB Atlas
-  await connectMongo();
+  try {
+    await connectMongo();
+  } catch (err: any) {
+    console.error('\n====================================================');
+    console.error('❌ RENTALHUB SERVER BOOT ERROR: MONGO CONNECTION FAILED');
+    console.error('====================================================');
+    console.error('Message:', err?.message || err);
+    console.error('Check your MONGODB_URI and Atlas IP Access Whitelist.\n');
+  }
 
   // Standard API response helpers
   const sendSuccess = (res: express.Response, data: any, status = 200) => {

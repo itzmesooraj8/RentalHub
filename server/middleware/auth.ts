@@ -2,7 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'rentalhub_super_secret_jwt_key_2026';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error('FATAL SECURITY ERROR: JWT_SECRET environment variable is missing.');
+    throw new Error('JWT_SECRET environment variable is missing. Please set JWT_SECRET in your environment or .env file.');
+  }
+  return secret;
+}
 
 export interface AuthenticatedUser {
   id: string;
@@ -31,7 +38,8 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret) as AuthenticatedUser;
     req.user = decoded;
     next();
   } catch (err: any) {
@@ -72,6 +80,7 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
 };
 
 export function generateToken(user: { id: string; email: string; role: UserRole; name?: string }): string {
+  const secret = getJwtSecret();
   return jwt.sign(
     {
       id: user.id,
@@ -79,7 +88,7 @@ export function generateToken(user: { id: string; email: string; role: UserRole;
       role: user.role,
       name: user.name,
     },
-    JWT_SECRET,
+    secret,
     { expiresIn: '7d' }
   );
 }

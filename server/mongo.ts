@@ -25,9 +25,13 @@ export async function connectMongo() {
     isConnected = true;
     console.log(`Connected to MongoDB Atlas: ${conn.connection.host}/${conn.connection.name}`);
 
-    // Ensure 2dsphere index is created for geospatial queries
+    // Clean up temporary test blocks to build unique index
+    const { AvailabilityBlockModel } = await import('./models/AvailabilityBlock');
+    await AvailabilityBlockModel.deleteMany({ bookingId: { $regex: '^bk_test_' } });
+
     const { EquipmentModel } = await import('./models/Equipment');
     await EquipmentModel.createIndexes();
+    await AvailabilityBlockModel.createIndexes();
 
     // Auto-seed database if initial documents are empty
     await seedMongoDatabase();

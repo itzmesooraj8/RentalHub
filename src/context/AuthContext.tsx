@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { CURRENT_USER } from '../data/mockData';
 import { authService } from '../services/authService';
 
 interface AuthContextType {
   currentUser: User | null;
   role: UserRole;
   isAuthenticated: boolean;
+  loading: boolean;
   loginRole: (role: UserRole) => Promise<void>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
@@ -17,10 +17,31 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(CURRENT_USER);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const role: UserRole = currentUser?.role || 'customer';
   const isAuthenticated = Boolean(currentUser);
+
+  useEffect(() => {
+    const token = localStorage.getItem('rentalhub_token');
+    if (token) {
+      authService
+        .getCurrentUser()
+        .then((user) => {
+          setCurrentUser(user);
+        })
+        .catch(() => {
+          authService.logout();
+          setCurrentUser(null);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   const loginRole = async (targetRole: UserRole) => {
     const res = await authService.loginWithRole(targetRole);
@@ -28,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    authService.logout();
     setCurrentUser(null);
   };
 
@@ -62,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         role,
         isAuthenticated,
+        loading,
         loginRole,
         logout,
         switchRole,

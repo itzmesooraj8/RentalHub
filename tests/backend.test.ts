@@ -81,9 +81,11 @@ async function runBackendTests() {
       customerName: 'Rival Renter',
     };
 
-    // Execute reservation attempts sequentially to test instant conflict detection
-    const res1 = await db.createBooking(bookingAttempt1);
-    const res2 = await db.createBooking(bookingAttempt2);
+    // Execute concurrent booking attempts via Promise.all to test race-condition locking
+    const [res1, res2] = await Promise.all([
+      db.createBooking(bookingAttempt1),
+      db.createBooking(bookingAttempt2),
+    ]);
 
     const successes = [res1, res2].filter((r) => r.success);
     const conflicts = [res1, res2].filter((r) => !r.success && r.error?.code === 'BOOKING_CONFLICT');
