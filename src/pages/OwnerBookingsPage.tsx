@@ -14,6 +14,7 @@ import {
   User as UserIcon,
   ChevronRight,
   Filter,
+  Loader2,
 } from 'lucide-react';
 import { Booking, BookingStatus, User } from '../types';
 import { ROUTES } from '../lib/routes';
@@ -21,7 +22,7 @@ import { ROUTES } from '../lib/routes';
 interface OwnerBookingsPageProps {
   currentUser: User | null;
   incomingBookings: Booking[];
-  onUpdateBookingStatus?: (id: string, status: BookingStatus) => void;
+  onUpdateBookingStatus?: (id: string, status: BookingStatus) => Promise<void> | void;
 }
 
 export const OwnerBookingsPage: React.FC<OwnerBookingsPageProps> = ({
@@ -30,6 +31,20 @@ export const OwnerBookingsPage: React.FC<OwnerBookingsPageProps> = ({
   onUpdateBookingStatus,
 }) => {
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const handleStatusChange = async (id: string, status: BookingStatus) => {
+    try {
+      setUpdatingId(id);
+      if (onUpdateBookingStatus) {
+        await onUpdateBookingStatus(id, status);
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to update booking status.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const ownerBookings = currentUser
     ? incomingBookings.filter((b) => b.ownerId === currentUser.id || true)
@@ -170,53 +185,65 @@ export const OwnerBookingsPage: React.FC<OwnerBookingsPageProps> = ({
                     {b.status === 'pending' && (
                       <>
                         <button
-                          onClick={() => onUpdateBookingStatus(b.id, 'confirmed')}
-                          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase tracking-wider transition cursor-pointer"
+                          onClick={() => handleStatusChange(b.id, 'confirmed')}
+                          disabled={updatingId === b.id}
+                          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                         >
-                          Approve Request
+                          {updatingId === b.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                          <span>Approve Request</span>
                         </button>
                         <button
-                          onClick={() => onUpdateBookingStatus(b.id, 'cancelled')}
-                          className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold uppercase tracking-wider transition cursor-pointer"
+                          onClick={() => handleStatusChange(b.id, 'cancelled')}
+                          disabled={updatingId === b.id}
+                          className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                         >
-                          Decline
+                          {updatingId === b.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                          <span>Decline</span>
                         </button>
                       </>
                     )}
 
                     {(b.status === 'confirmed' || b.status === 'locked') && (
                       <button
-                        onClick={() => onUpdateBookingStatus(b.id, 'pickup_ready')}
-                        className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold uppercase tracking-wider transition cursor-pointer"
+                        onClick={() => handleStatusChange(b.id, 'pickup_ready')}
+                        disabled={updatingId === b.id}
+                        className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
-                        Mark Pickup Ready
+                        {updatingId === b.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        <span>Mark Pickup Ready</span>
                       </button>
                     )}
 
                     {b.status === 'pickup_ready' && (
                       <button
-                        onClick={() => onUpdateBookingStatus(b.id, 'active')}
-                        className="px-4 py-2 rounded-xl bg-[#F27D26] hover:bg-[#d96a1a] text-black font-bold uppercase tracking-wider transition cursor-pointer"
+                        onClick={() => handleStatusChange(b.id, 'active')}
+                        disabled={updatingId === b.id}
+                        className="px-4 py-2 rounded-xl bg-[#F27D26] hover:bg-[#d96a1a] text-black font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
-                        Mark Handed Over / Active
+                        {updatingId === b.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        <span>Mark Handed Over / Active</span>
                       </button>
                     )}
 
                     {b.status === 'active' && (
                       <button
-                        onClick={() => onUpdateBookingStatus(b.id, 'return_pending')}
-                        className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold uppercase tracking-wider transition cursor-pointer"
+                        onClick={() => handleStatusChange(b.id, 'return_pending')}
+                        disabled={updatingId === b.id}
+                        className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
-                        Mark Return Inspection Pending
+                        {updatingId === b.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        <span>Mark Return Inspection Pending</span>
                       </button>
                     )}
 
                     {b.status === 'return_pending' && (
                       <button
-                        onClick={() => onUpdateBookingStatus(b.id, 'completed')}
-                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase tracking-wider transition cursor-pointer"
+                        onClick={() => handleStatusChange(b.id, 'completed')}
+                        disabled={updatingId === b.id}
+                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
-                        Confirm Return & Release Deposit
+                        {updatingId === b.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        <span>Confirm Return & Release Deposit</span>
                       </button>
                     )}
                   </div>

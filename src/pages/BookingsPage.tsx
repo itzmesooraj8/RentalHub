@@ -15,6 +15,7 @@ import {
   MapPin,
   ChevronRight,
   Filter,
+  Loader2,
 } from 'lucide-react';
 import { Booking, BookingStatus, User } from '../types';
 import { ROUTES } from '../lib/routes';
@@ -22,7 +23,7 @@ import { ROUTES } from '../lib/routes';
 interface BookingsPageProps {
   currentUser: User | null;
   bookings: Booking[];
-  onCancelBooking?: (bookingId: string) => void;
+  onCancelBooking?: (bookingId: string) => Promise<void> | void;
   onAddReview?: (bookingId: string) => void;
 }
 
@@ -33,6 +34,20 @@ export const BookingsPage: React.FC<BookingsPageProps> = ({
 }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const handleCancel = async (bookingId: string) => {
+    try {
+      setCancellingId(bookingId);
+      if (onCancelBooking) {
+        await onCancelBooking(bookingId);
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to cancel booking.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const tabs = [
     { id: 'all', label: 'All Bookings', count: bookings.length },
@@ -293,10 +308,11 @@ export const BookingsPage: React.FC<BookingsPageProps> = ({
 
                   {(b.status === 'pending' || b.status === 'confirmed' || b.status === 'locked') && onCancelBooking && (
                     <button
-                      onClick={() => onCancelBooking(b.id)}
-                      className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                      onClick={() => handleCancel(b.id)}
+                      disabled={cancellingId === b.id}
+                      className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
                     >
-                      <XCircle className="w-4 h-4" />
+                      {cancellingId === b.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                       <span>Cancel Booking</span>
                     </button>
                   )}
