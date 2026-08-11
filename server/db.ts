@@ -476,12 +476,14 @@ export class MongoDatabaseService {
     status: Booking['status']
   ): Promise<{ success: boolean; booking?: Booking; error?: { code: string; message: string } }> {
     const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['pickup_ready', 'cancelled', 'confirmed'],
-      pickup_ready: ['active', 'cancelled'],
-      active: ['returning', 'completed'],
-      returning: ['completed', 'disputed'],
-      completed: [],
+      pending: ['confirmed', 'cancelled', 'pickup_ready', 'active'],
+      locked: ['confirmed', 'cancelled', 'pickup_ready', 'active'],
+      confirmed: ['pickup_ready', 'active', 'cancelled', 'confirmed'],
+      pickup_ready: ['active', 'cancelled', 'return_pending', 'returning'],
+      active: ['return_pending', 'returning', 'completed'],
+      returning: ['completed', 'disputed', 'return_pending'],
+      return_pending: ['completed', 'disputed', 'returning'],
+      completed: ['disputed'],
       cancelled: [],
       disputed: ['completed', 'cancelled'],
     };
