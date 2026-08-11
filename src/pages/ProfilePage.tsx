@@ -12,8 +12,8 @@ interface ProfilePageProps {
 export const ProfilePage: React.FC<ProfilePageProps> = ({ user, onUpdateUser, onSwitchRole }) => {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone || '+1 (555) 234-5678');
-  const [location, setLocation] = useState(user.location || 'Austin, TX');
+  const [phone, setPhone] = useState(user.phone || '+91 98110 54321');
+  const [location, setLocation] = useState(user.location || 'New Delhi, NCR');
   const [bio, setBio] = useState(user.bio || 'General contractor and heavy machinery equipment rental partner.');
   const [savedSuccess, setSavedSuccess] = useState(false);
 

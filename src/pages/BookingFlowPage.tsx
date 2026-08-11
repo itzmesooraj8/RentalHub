@@ -29,7 +29,7 @@ export const BookingFlowPage: React.FC<BookingFlowPageProps> = ({
   const equipment = equipmentList.find((e) => e.id === id) || equipmentList[0];
 
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('delivery');
-  const [deliveryAddress, setDeliveryAddress] = useState(currentUser?.location || '742 Industrial Pkwy, Austin TX');
+  const [deliveryAddress, setDeliveryAddress] = useState(currentUser?.location || '742 BKC Industrial Area, Mumbai, MH');
   const [isStripeModalOpen, setIsStripeModalOpen] = useState(false);
 
   // Price calculations

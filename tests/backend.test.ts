@@ -17,7 +17,7 @@ async function runBackendTests() {
 
     // 2. JWT Generation & Role Authorization
     console.log('[TEST 2] Testing JWT Token Generation & Role Claims...');
-    const testCustomer = { id: 'usr_test_cust', email: 'sarah.j@contracting.com', role: 'customer' as const, name: 'Sarah Jenkins' };
+    const testCustomer = { id: 'usr_test_cust', email: 'ananya.i@contracting.in', role: 'customer' as const, name: 'Ananya Iyer' };
     const testAdmin = { id: 'usr_test_admin', email: 'admin@rentalhub.com', role: 'admin' as const, name: 'Super Admin' };
 
     const custToken = generateToken(testCustomer);
@@ -42,11 +42,11 @@ async function runBackendTests() {
 
     // 4. Equipment & Geospatial 2dsphere Search ($near)
     console.log('[TEST 4] Testing MongoDB 2dsphere Geospatial $near Query...');
-    const austinLat = 30.2672;
-    const austinLng = -97.7431;
+    const mumbaiLat = 19.0760;
+    const mumbaiLng = 72.8777;
 
-    const nearbyEquipment = await db.getEquipmentNearby(austinLat, austinLng, 50);
-    console.log(`✓ PASSED: Found ${nearbyEquipment.length} equipment items within 50km radius of Austin, TX.\n`);
+    const nearbyEquipment = await db.getEquipmentNearby(mumbaiLat, mumbaiLng, 500);
+    console.log(`✓ PASSED: Found ${nearbyEquipment.length} equipment items within 500km radius of Mumbai, MH.\n`);
 
     // 5. Day-Slot Atomic Concurrency Lock via Promise.all
     console.log('[TEST 5] Testing Day-Slot Atomic Concurrency Lock ({ equipmentId: 1, date: 1 }) via Promise.all...');

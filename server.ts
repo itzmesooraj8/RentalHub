@@ -168,7 +168,7 @@ async function startServer() {
       role: targetRole,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
       phone: phone || '',
-      location: location || 'Austin, TX',
+      location: location || 'Mumbai, MH',
       bio: 'Equipment rental member.',
       trustScore: 90,
       kycStatus: targetRole === 'owner' ? 'pending' : 'verified',
@@ -301,7 +301,7 @@ async function startServer() {
       ...equipmentData,
       id: `eq_${Date.now()}`,
       ownerId: req.user!.id,
-      ownerName: req.user!.name || 'Marcus Vance',
+      ownerName: req.user!.name || 'Aarav Sharma',
       createdAt: new Date().toISOString(),
     });
 

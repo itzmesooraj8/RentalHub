@@ -15,14 +15,14 @@ export const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [cardName, setCardName] = useState('Marcus Vance');
+  const [cardName, setCardName] = useState('Ananya Iyer');
   const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
   const [cardExp, setCardExp] = useState('12/28');
   const [cardCvc, setCardCvc] = useState('988');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAutoFillTestCard = () => {
-    setCardName('Marcus Vance (Test Contractor)');
+    setCardName('Ananya Iyer (Test Renter)');
     setCardNumber('4242 4242 4242 4242');
     setCardExp('08/28');
     setCardCvc('123');

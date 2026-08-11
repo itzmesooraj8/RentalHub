@@ -11,12 +11,12 @@ interface AuthState {
 
 const INITIAL_DEMO_USER: User = {
   id: 'usr_cust_1',
-  name: 'Sarah Jenkins',
-  email: 'sarah.j@contracting.com',
+  name: 'Ananya Iyer',
+  email: 'ananya.i@contracting.in',
   role: 'customer',
   avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
-  phone: '+1 (555) 345-6789',
-  location: 'Austin, TX',
+  phone: '+91 98110 54321',
+  location: 'New Delhi, NCR',
   bio: 'Residential renovation general contractor and DIY enthusiast.',
   trustScore: 99,
   kycStatus: 'verified',

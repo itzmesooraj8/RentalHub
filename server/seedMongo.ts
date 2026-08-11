@@ -19,13 +19,23 @@ import {
 
 export async function seedMongoDatabase() {
   try {
+    const isExplicitRun = process.argv[1]?.endsWith('seedMongo.ts');
     const userCount = await UserModel.countDocuments();
-    if (userCount > 0) {
+    if (userCount > 0 && !isExplicitRun) {
       console.log(`MongoDB Atlas contains ${userCount} users. Skipping auto-seeding.`);
       return;
     }
 
-    console.log('Seeding initial dataset into MongoDB Atlas...');
+    console.log('Clearing and seeding updated Indian dataset into MongoDB Atlas...');
+    await UserModel.deleteMany({});
+    await EquipmentModel.deleteMany({});
+    await AvailabilityBlockModel.deleteMany({});
+    await BookingModel.deleteMany({});
+    await ReviewModel.deleteMany({});
+    await DisputeModel.deleteMany({});
+    await NotificationModel.deleteMany({});
+    await CategoryModel.deleteMany({});
+    await AuditLogModel.deleteMany({});
 
     // 1. Users
     await UserModel.insertMany(INITIAL_USERS);
@@ -59,36 +69,27 @@ export async function seedMongoDatabase() {
     const initialCategories = [
       {
         id: 'cat_heavy',
+        name: 'Heavy Machinery',
+        icon: 'Truck',
+        description: 'Construction and earthmoving heavy machinery',
+        itemCount: 4,
         industry: 'Construction',
-        category: 'Heavy Machinery',
-        subcategories: ['Excavators', 'Bulldozers', 'Loaders', 'Cranes'],
-        attributes: [
-          { name: 'Operating Weight', type: 'string' as const, required: true },
-          { name: 'Max Dig Depth', type: 'string' as const, required: false },
-          { name: 'Engine Power', type: 'string' as const, required: true },
-        ],
       },
       {
         id: 'cat_photo',
+        name: 'Photography & Drones',
+        icon: 'Camera',
+        description: 'Professional cinema camera gear and drones',
+        itemCount: 2,
         industry: 'Photography & Media',
-        category: 'Photography & Drones',
-        subcategories: ['Cinema Cameras', 'Lenses', 'Lighting', 'Drones'],
-        attributes: [
-          { name: 'Sensor', type: 'string' as const, required: true },
-          { name: 'Resolution', type: 'string' as const, required: true },
-          { name: 'Lens Mount', type: 'string' as const, required: true },
-        ],
       },
       {
         id: 'cat_event',
+        name: 'Event & Audio',
+        icon: 'Volume2',
+        description: 'Concert grade sound reinforcement and audio systems',
+        itemCount: 1,
         industry: 'Events',
-        category: 'Event & Audio',
-        subcategories: ['Line Array Speakers', 'Subwoofers', 'Mixers', 'Lighting Rigs'],
-        attributes: [
-          { name: 'Max SPL', type: 'string' as const, required: true },
-          { name: 'Total Output', type: 'string' as const, required: true },
-          { name: 'Coverage', type: 'string' as const, required: false },
-        ],
       },
     ];
     await CategoryModel.insertMany(initialCategories);

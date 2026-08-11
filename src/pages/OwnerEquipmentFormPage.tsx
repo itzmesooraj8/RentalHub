@@ -49,7 +49,7 @@ export const OwnerEquipmentFormPage: React.FC<OwnerEquipmentFormPageProps> = ({
   const [securityDeposit, setSecurityDeposit] = useState<number>(800);
 
   // Location & Fulfillment
-  const [location, setLocation] = useState('Austin, TX Yard Depot #2');
+  const [location, setLocation] = useState('Andheri East Yard Depot #2, Mumbai, MH');
   const [deliveryAvailable, setDeliveryAvailable] = useState(true);
   const [deliveryRadiusMiles, setDeliveryRadiusMiles] = useState(50);
 

@@ -15,11 +15,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, currentUser }) => {
   const [showPipeline, setShowPipeline] = useState(false);
 
   // Form Fields
-  const [email, setEmail] = useState('marcus@cascadiatrenching.com');
+  const [email, setEmail] = useState('aarav@heavyrentals.in');
   const [password, setPassword] = useState('••••••••••••');
-  const [companyName, setCompanyName] = useState('Cascadia Heavy Trenching LLC');
+  const [companyName, setCompanyName] = useState('Aarav Heavy Infra Pvt Ltd');
   const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
-  const [licenseNumber, setLicenseNumber] = useState('WA-EXC-992014');
+  const [licenseNumber, setLicenseNumber] = useState('MH-EXC-992014');
   const [pipelineOutput, setPipelineOutput] = useState<string | null>(null);
   const [isExecutingPipeline, setIsExecutingPipeline] = useState(false);
 
@@ -27,8 +27,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, currentUser }) => {
   const demoAccounts: User[] = [
     {
       id: 'usr-101',
-      name: 'Marcus Vance',
-      email: 'marcus@cascadiatrenching.com',
+      name: 'Aarav Sharma',
+      email: 'aarav@heavyrentals.in',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
       role: 'customer',
       trustScore: 96,
