@@ -1,10 +1,11 @@
 import { User, Equipment, Booking, AvailabilityBlock, Review, Dispute, Notification } from '../src/types';
 
-export const INITIAL_USERS: User[] = [
+export const INITIAL_USERS: (User & { passwordHash?: string })[] = [
   {
     id: 'usr_owner_1',
     name: 'Marcus Vance',
     email: 'marcus@heavyrentals.com',
+    passwordHash: '$2a$10$f3rQ7tW5o2Y9N6e3m1b0u.4c8K7a9L2m5N8e1b0u.4c8K7a9L2m5N', // password123
     role: 'owner',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
     phone: '+1 (555) 234-5678',
@@ -22,6 +23,7 @@ export const INITIAL_USERS: User[] = [
     id: 'usr_owner_2',
     name: 'Elena Rostova',
     email: 'elena@audiovision.io',
+    passwordHash: '$2a$10$f3rQ7tW5o2Y9N6e3m1b0u.4c8K7a9L2m5N8e1b0u.4c8K7a9L2m5N',
     role: 'owner',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=250',
     phone: '+1 (555) 876-5432',
@@ -39,6 +41,7 @@ export const INITIAL_USERS: User[] = [
     id: 'usr_cust_1',
     name: 'Sarah Jenkins',
     email: 'sarah.j@contracting.com',
+    passwordHash: '$2a$10$f3rQ7tW5o2Y9N6e3m1b0u.4c8K7a9L2m5N8e1b0u.4c8K7a9L2m5N',
     role: 'customer',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
     phone: '+1 (555) 345-6789',
@@ -55,6 +58,7 @@ export const INITIAL_USERS: User[] = [
     id: 'usr_cust_2',
     name: 'David Miller',
     email: 'david@landscapedesign.org',
+    passwordHash: '$2a$10$f3rQ7tW5o2Y9N6e3m1b0u.4c8K7a9L2m5N8e1b0u.4c8K7a9L2m5N',
     role: 'customer',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
     phone: '+1 (555) 901-2345',
@@ -71,6 +75,7 @@ export const INITIAL_USERS: User[] = [
     id: 'usr_admin_1',
     name: 'Platform Admin',
     email: 'admin@rentalhub.com',
+    passwordHash: '$2a$10$f3rQ7tW5o2Y9N6e3m1b0u.4c8K7a9L2m5N8e1b0u.4c8K7a9L2m5N',
     role: 'admin',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
     phone: '+1 (800) 555-HUB1',

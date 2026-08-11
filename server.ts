@@ -1,19 +1,53 @@
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import bcrypt from 'bcryptjs';
 import { createServer as createViteServer } from 'vite';
 import { connectMongo } from './server/mongo';
 import { db } from './server/db';
+import { UserModel } from './server/models/User';
 import { authenticate, requireRole, generateToken, AuthenticatedRequest } from './server/middleware/auth';
+import { validateBody, registerSchema, loginSchema, equipmentSchema, bookingSchema } from './server/middleware/validation';
 import { generateDynamicPricing, generateRentalAiAssistantResponse } from './server/geminiService';
 import { User, UserRole } from './src/types';
+
+// SSE Clients Registry for Push-Based Real-Time Availability Events
+const sseClients: express.Response[] = [];
+
+export function broadcastSseEvent(eventType: string, data: any) {
+  const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+  sseClients.forEach((client) => client.write(payload));
+}
 
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT || 3000);
 
+  // Security Hardening Framework: Helmet Headers & Rate-Limiting
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Disabled for Vite inline development HMR & asset loading
+    })
+  );
+
   app.use(cors());
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '15mb' }));
+
+  // Global Rate Limiter: 200 requests per 15 minutes window
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    message: {
+      success: false,
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests from this IP. Please try again in 15 minutes.',
+      },
+    },
+  });
+  app.use('/api/', apiLimiter);
 
   // Connect to MongoDB Atlas
   try {
@@ -41,18 +75,49 @@ async function startServer() {
       success: true,
       data: {
         status: 'ok',
-        service: 'RentalHub Production Express Server (MongoDB Atlas)',
+        service: 'RentalHub Production Express Server (MongoDB Atlas + Security Framework)',
         timestamp: new Date().toISOString(),
       },
     });
   });
 
-  // --- AUTH ENDPOINTS ---
-  app.post('/api/auth/register', async (req, res) => {
-    const { name, email, password, role, phone, location } = req.body;
-    if (!email || !name) {
-      return sendError(res, 'VALIDATION_ERROR', 'Name and email are required.');
+  // --- SSE REAL-TIME AVAILABILITY STREAM ENDPOINT ---
+  app.get('/api/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    sseClients.push(res);
+    res.write(`event: connected\ndata: ${JSON.stringify({ message: 'Live SSE Availability Stream Connected' })}\n\n`);
+
+    req.on('close', () => {
+      const idx = sseClients.indexOf(res);
+      if (idx !== -1) sseClients.splice(idx, 1);
+    });
+  });
+
+  // --- FILE UPLOADS ENDPOINT (Data-URI Base64) ---
+  app.post('/api/upload', authenticate, (req, res) => {
+    const { imageBase64, filename } = req.body;
+    if (!imageBase64) {
+      return sendError(res, 'VALIDATION_ERROR', 'imageBase64 payload is required.');
     }
+
+    // Process base64 data-URI payload
+    const dataUrl = imageBase64.startsWith('data:')
+      ? imageBase64
+      : `data:image/jpeg;base64,${imageBase64}`;
+
+    sendSuccess(res, {
+      url: dataUrl,
+      filename: filename || `asset_${Date.now()}.jpg`,
+      uploadedAt: new Date().toISOString(),
+    });
+  });
+
+  // --- AUTH ENDPOINTS ---
+  app.post('/api/auth/register', validateBody(registerSchema), async (req, res) => {
+    const { name, email, password, role, phone, location } = req.body;
 
     const existing = await db.getUserByEmail(email);
     if (existing) {
@@ -60,11 +125,13 @@ async function startServer() {
     }
 
     const targetRole: UserRole = ['customer', 'owner', 'admin'].includes(role) ? role : 'customer';
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    const newUser: User = {
+    const newUser: User & { passwordHash?: string } = {
       id: `usr_${Date.now()}`,
       name,
       email,
+      passwordHash,
       role: targetRole,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
       phone: phone || '',
@@ -85,21 +152,40 @@ async function startServer() {
     sendSuccess(res, { token, user: newUser }, 201);
   });
 
-  app.post('/api/auth/login', async (req, res) => {
-    const { email, role } = req.body;
-    let user = await db.getUserByEmail(email);
+  // Authenticated Login with Bcrypt Password Verification
+  app.post('/api/auth/login', validateBody(loginSchema), async (req, res) => {
+    const { email, password } = req.body;
 
-    if (!user) {
-      const users = await db.getUsers();
-      const usersByRole = users.filter((u) => u.role === (role || 'customer'));
-      user = usersByRole[0] || users[0];
+    // Fetch user with passwordHash
+    const userDoc = await UserModel.findOne({ email: new RegExp(`^${email}$`, 'i') }).select('+passwordHash').lean();
+
+    if (!userDoc) {
+      return sendError(res, 'INVALID_CREDENTIALS', 'Invalid email or password.', 401);
     }
 
-    const token = generateToken(user);
-    sendSuccess(res, { token, user });
+    // Verify Bcrypt Password Hash
+    if (userDoc.passwordHash) {
+      const isMatch = await bcrypt.compare(password, userDoc.passwordHash);
+      if (!isMatch) {
+        return sendError(res, 'INVALID_CREDENTIALS', 'Invalid email or password.', 401);
+      }
+    } else {
+      // Fallback verification for demo seed accounts (password123)
+      const isDefaultMatch = password === 'password123';
+      if (!isDefaultMatch) {
+        return sendError(res, 'INVALID_CREDENTIALS', 'Invalid email or password.', 401);
+      }
+    }
+
+    const token = generateToken(userDoc as unknown as User);
+    sendSuccess(res, { token, user: userDoc as unknown as User });
   });
 
   app.post('/api/auth/demo-login', async (req, res) => {
+    if (process.env.ALLOW_DEMO_LOGIN === 'false') {
+      return sendError(res, 'FORBIDDEN', 'Demo logins are disabled in production environment.', 403);
+    }
+
     const { role } = req.body;
     const users = await db.getUsers();
     const user = users.find((u) => u.role === role) || users[0];
@@ -173,7 +259,7 @@ async function startServer() {
     sendSuccess(res, item);
   });
 
-  app.post('/api/equipment', authenticate, requireRole('owner', 'admin'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/equipment', authenticate, requireRole('owner', 'admin'), validateBody(equipmentSchema), async (req: AuthenticatedRequest, res) => {
     const equipmentData = req.body;
     const newEquipment = await db.createEquipment({
       ...equipmentData,
@@ -182,6 +268,8 @@ async function startServer() {
       ownerName: req.user!.name || 'Marcus Vance',
       createdAt: new Date().toISOString(),
     });
+
+    broadcastSseEvent('EQUIPMENT_CREATED', newEquipment);
     sendSuccess(res, newEquipment, 201);
   });
 
@@ -218,11 +306,8 @@ async function startServer() {
     sendSuccess(res, booking);
   });
 
-  app.post('/api/bookings', authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/bookings', authenticate, validateBody(bookingSchema), async (req: AuthenticatedRequest, res) => {
     const { equipmentId, startDate, endDate, deliveryMethod, deliveryAddress } = req.body;
-    if (!equipmentId || !startDate || !endDate) {
-      return sendError(res, 'VALIDATION_ERROR', 'equipmentId, startDate, and endDate are required.');
-    }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -280,6 +365,14 @@ async function startServer() {
       return sendError(res, result.error?.code || 'BOOKING_FAILED', result.error?.message || 'Failed to create booking.');
     }
 
+    // Broadcast Real-time Push Availability Event to Connected SSE Clients
+    broadcastSseEvent('BOOKING_CREATED', {
+      equipmentId: newBooking.equipmentId,
+      startDate: newBooking.startDate,
+      endDate: newBooking.endDate,
+      bookingId: newBooking.id,
+    });
+
     sendSuccess(res, result.booking, 201);
   });
 
@@ -292,6 +385,7 @@ async function startServer() {
       return sendError(res, result.error?.code || 'UPDATE_FAILED', result.error?.message || 'Failed to update booking status.');
     }
 
+    broadcastSseEvent('BOOKING_STATUS_CHANGED', result.booking);
     sendSuccess(res, result.booking);
   });
 

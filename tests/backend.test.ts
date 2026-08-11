@@ -2,6 +2,7 @@ import { connectMongo } from '../server/mongo';
 import { db } from '../server/db';
 import { generateToken } from '../server/middleware/auth';
 import { Equipment, Booking } from '../src/types';
+import bcrypt from 'bcryptjs';
 
 async function runBackendTests() {
   console.log('====================================================');
@@ -16,7 +17,7 @@ async function runBackendTests() {
 
     // 2. JWT Generation & Role Authorization
     console.log('[TEST 2] Testing JWT Token Generation & Role Claims...');
-    const testCustomer = { id: 'usr_test_cust', email: 'test.cust@rentalhub.com', role: 'customer' as const, name: 'Test Renter' };
+    const testCustomer = { id: 'usr_test_cust', email: 'sarah.j@contracting.com', role: 'customer' as const, name: 'Sarah Jenkins' };
     const testAdmin = { id: 'usr_test_admin', email: 'admin@rentalhub.com', role: 'admin' as const, name: 'Super Admin' };
 
     const custToken = generateToken(testCustomer);
@@ -25,16 +26,30 @@ async function runBackendTests() {
     if (!custToken || !adminToken) throw new Error('JWT token generation failed.');
     console.log('✓ PASSED: JWT tokens generated for Customer and Admin roles.\n');
 
-    // 3. Equipment & Geospatial 2dsphere Search ($near)
-    console.log('[TEST 3] Testing MongoDB 2dsphere Geospatial $near Query...');
+    // 3. Bcrypt Password Hash Verification
+    console.log('[TEST 3] Testing Bcrypt Password Verification & Invalid Password Rejection...');
+    const plainPassword = 'password123';
+    const passwordHash = await bcrypt.hash(plainPassword, 10);
+
+    const isValidMatch = await bcrypt.compare('password123', passwordHash);
+    const isInvalidMatch = await bcrypt.compare('wrongPassword', passwordHash);
+
+    if (isValidMatch && !isInvalidMatch) {
+      console.log('✓ PASSED: Bcrypt correctly verified valid password and rejected invalid password.\n');
+    } else {
+      throw new Error('Bcrypt password verification check failed.');
+    }
+
+    // 4. Equipment & Geospatial 2dsphere Search ($near)
+    console.log('[TEST 4] Testing MongoDB 2dsphere Geospatial $near Query...');
     const austinLat = 30.2672;
     const austinLng = -97.7431;
 
     const nearbyEquipment = await db.getEquipmentNearby(austinLat, austinLng, 50);
     console.log(`✓ PASSED: Found ${nearbyEquipment.length} equipment items within 50km radius of Austin, TX.\n`);
 
-    // 4. Double-Booking Conflict Prevention & Atomic Transaction
-    console.log('[TEST 4] Testing Concurrent Double-Booking Conflict Prevention...');
+    // 5. Double-Booking Conflict Prevention & Atomic Transaction
+    console.log('[TEST 5] Testing Concurrent Double-Booking Conflict Prevention via Promise.all...');
     const targetEq = nearbyEquipment[0] || (await db.getEquipment())[0];
 
     // Clean up previous test bookings to ensure idempotent test execution
@@ -98,8 +113,8 @@ async function runBackendTests() {
       throw new Error(`Double-booking test failed! Successes: ${successes.length}, Conflicts: ${conflicts.length}`);
     }
 
-    // 5. Booking State Machine Validation
-    console.log('[TEST 5] Testing Illegal Booking Status State Machine Transition...');
+    // 6. Booking State Machine Validation
+    console.log('[TEST 6] Testing Illegal Booking Status State Machine Transition...');
     const createdBookingId = successes[0].booking!.id;
     const illegalUpdate = await db.updateBookingStatus(createdBookingId, 'completed'); // Illegal: confirmed -> completed directly
 

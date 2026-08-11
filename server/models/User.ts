@@ -1,11 +1,16 @@
 import mongoose, { Schema, Model } from 'mongoose';
 import { User as UserType } from '../../src/types';
 
-const UserSchema = new Schema<UserType>(
+export interface IUserMongo extends UserType {
+  passwordHash?: string;
+}
+
+const UserSchema = new Schema<IUserMongo>(
   {
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, index: true },
+    passwordHash: { type: String, select: false },
     avatar: { type: String },
     role: { type: String, enum: ['customer', 'owner', 'admin'], default: 'customer', index: true },
     phone: { type: String },
@@ -26,5 +31,5 @@ const UserSchema = new Schema<UserType>(
   }
 );
 
-export const UserModel: Model<UserType> =
-  (mongoose.models.User as Model<UserType>) || mongoose.model<UserType>('User', UserSchema);
+export const UserModel: Model<IUserMongo> =
+  (mongoose.models.User as Model<IUserMongo>) || mongoose.model<IUserMongo>('User', UserSchema);
