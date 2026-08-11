@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { User, Equipment, Booking, AvailabilityBlock, Review, Dispute, Notification, OwnerAnalytics, AdminAnalytics, UserRole } from '../src/types';
+import { User, Equipment, Booking, AvailabilityBlock, Review, Dispute, Notification, OwnerAnalytics, AdminAnalytics, UserRole, EscrowLedger } from '../src/types';
 import { UserModel } from './models/User';
 import { EquipmentModel } from './models/Equipment';
 import { BookingModel } from './models/Booking';
@@ -9,6 +9,7 @@ import { DisputeModel } from './models/Dispute';
 import { NotificationModel } from './models/Notification';
 import { AuditLogModel } from './models/AuditLog';
 import { CategoryModel } from './models/Category';
+import { EscrowLedgerModel } from './models/EscrowLedger';
 import { Category } from '../src/types';
 import { generateTextEmbedding } from './geminiService';
 
@@ -839,6 +840,120 @@ export class MongoDatabaseService {
     } catch (e) {
       console.error('Mongo createReview error:', e);
       throw new Error('Failed to submit review.');
+    }
+  }
+
+  // --- WEBHOOK-BASED ESCROW SIMULATION & TRANSACTIONAL LEDGER ---
+  async getEscrowLedger(bookingId: string): Promise<EscrowLedger | undefined> {
+    try {
+      const ledger = await EscrowLedgerModel.findOne({ bookingId }).lean();
+      if (ledger) return ledger as unknown as EscrowLedger;
+    } catch (e) {
+      console.error('Mongo getEscrowLedger error:', e);
+    }
+    return undefined;
+  }
+
+  async createEscrowHold(data: {
+    bookingId: string;
+    equipmentId: string;
+    equipmentTitle?: string;
+    customerId: string;
+    customerName?: string;
+    ownerId: string;
+    ownerName?: string;
+    amount: number;
+    securityDeposit: number;
+    actor?: string;
+  }): Promise<EscrowLedger> {
+    try {
+      const now = new Date().toISOString();
+      const existing = await EscrowLedgerModel.findOne({ bookingId: data.bookingId }).lean();
+      if (existing) {
+        return existing as unknown as EscrowLedger;
+      }
+
+      const initialEntry = {
+        id: `escrow_${Date.now()}`,
+        bookingId: data.bookingId,
+        equipmentId: data.equipmentId,
+        equipmentTitle: data.equipmentTitle || 'Rental Asset',
+        customerId: data.customerId,
+        customerName: data.customerName || 'Customer',
+        ownerId: data.ownerId,
+        ownerName: data.ownerName || 'Owner',
+        amount: data.amount,
+        securityDeposit: data.securityDeposit,
+        status: 'HELD' as const,
+        heldAt: now,
+        ledgerHistory: [
+          {
+            action: 'FUNDS_HELD_IN_ESCROW',
+            timestamp: now,
+            actor: data.actor || 'Stripe Webhook Gateway',
+            status: 'HELD' as const,
+            notes: `Locked ₹${data.amount} rental fees + ₹${data.securityDeposit} security deposit in platform escrow vault.`,
+          },
+        ],
+        createdAt: now,
+      };
+
+      const created = await EscrowLedgerModel.create(initialEntry);
+      await this.logAudit('system', 'Escrow Vault Engine', 'ESCROW_FUNDS_HELD', data.bookingId, `Amount: ₹${data.amount + data.securityDeposit}`);
+      return created.toObject() as unknown as EscrowLedger;
+    } catch (e) {
+      console.error('Mongo createEscrowHold error:', e);
+      throw new Error('Failed to create escrow hold entry.');
+    }
+  }
+
+  async releaseEscrow(bookingId: string, actor: string = 'Platform System'): Promise<EscrowLedger | undefined> {
+    try {
+      const now = new Date().toISOString();
+      const ledger = await EscrowLedgerModel.findOne({ bookingId });
+      if (!ledger) return undefined;
+
+      ledger.status = 'RELEASED';
+      ledger.releasedAt = now;
+      ledger.ledgerHistory.push({
+        action: 'ESCROW_FUNDS_RELEASED',
+        timestamp: now,
+        actor,
+        status: 'RELEASED',
+        notes: `Inspection passed cleanly. Released rental payout to owner and security deposit back to customer.`,
+      });
+
+      await ledger.save();
+      await this.logAudit('system', actor, 'ESCROW_FUNDS_RELEASED', bookingId, `Released ₹${ledger.amount}`);
+      return ledger.toObject() as unknown as EscrowLedger;
+    } catch (e) {
+      console.error('Mongo releaseEscrow error:', e);
+      return undefined;
+    }
+  }
+
+  async disputeEscrow(bookingId: string, actor: string = 'Customer/Owner', reason: string = 'Damage Dispute Raised'): Promise<EscrowLedger | undefined> {
+    try {
+      const now = new Date().toISOString();
+      const ledger = await EscrowLedgerModel.findOne({ bookingId });
+      if (!ledger) return undefined;
+
+      ledger.status = 'DISPUTED';
+      ledger.disputedAt = now;
+      ledger.ledgerHistory.push({
+        action: 'ESCROW_FUNDS_LOCKED_DISPUTE',
+        timestamp: now,
+        actor,
+        status: 'DISPUTED',
+        notes: `Dispute flagged: ${reason}. Security deposit hold locked pending admin dispute resolution.`,
+      });
+
+      await ledger.save();
+      await this.logAudit('system', actor, 'ESCROW_FUNDS_DISPUTED', bookingId, `Reason: ${reason}`);
+      return ledger.toObject() as unknown as EscrowLedger;
+    } catch (e) {
+      console.error('Mongo disputeEscrow error:', e);
+      return undefined;
     }
   }
 }

@@ -18,10 +18,13 @@ import {
   Lock,
   ChevronRight,
   Info,
+  Sparkles,
 } from 'lucide-react';
 import { Booking, BookingStatus, User, Review } from '../types';
 import { ROUTES } from '../lib/routes';
 import { DamageReportModal } from '../components/DamageReportModal';
+import { EscrowLedgerCard } from '../components/EscrowLedgerCard';
+import { AiPreDispatchModal } from '../components/AiPreDispatchModal';
 
 interface BookingDetailsPageProps {
   currentUser: User | null;
@@ -47,6 +50,7 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
   const navigate = useNavigate();
 
   const [isConditionModalOpen, setIsConditionModalOpen] = useState(false);
+  const [isAiPreDispatchOpen, setIsAiPreDispatchOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -247,19 +251,31 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
             </div>
           </div>
 
+          {/* Webhook-Based Escrow Simulation Ledger */}
+          <EscrowLedgerCard bookingId={booking.id} currentUser={currentUser} />
+
           {/* Condition Audit Report Section */}
           <div className="bg-[#111111] rounded-3xl p-6 border border-[#1F1F1F] shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#1F1F1F] pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1F1F1F] pb-3 gap-2">
               <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
                 <Camera className="w-4 h-4 text-[#F27D26]" />
                 <span>Condition & Asset Inspection Log</span>
               </h3>
-              <button
-                onClick={() => setIsConditionModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-[#1A1A1A] hover:bg-[#222222] border border-[#333333] text-xs font-bold text-white uppercase tracking-wider transition cursor-pointer"
-              >
-                Upload / Update Photos
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsAiPreDispatchOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-xs font-bold text-purple-300 uppercase tracking-wider transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Gemini AI Pre-Dispatch Audit
+                </button>
+                <button
+                  onClick={() => setIsConditionModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-[#1A1A1A] hover:bg-[#222222] border border-[#333333] text-xs font-bold text-white uppercase tracking-wider transition cursor-pointer"
+                >
+                  Upload Photos
+                </button>
+              </div>
             </div>
 
             {booking.condition?.pickupPhotos?.length || booking.condition?.returnPhotos?.length ? (
@@ -340,6 +356,14 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
           {/* Contextual Action Buttons */}
           <div className="bg-[#111111] rounded-3xl p-6 border border-[#1F1F1F] shadow-xl space-y-3 font-mono text-xs">
             <h3 className="font-bold uppercase tracking-wider text-white mb-2">Actions</h3>
+
+            <button
+              onClick={() => setIsAiPreDispatchOpen(true)}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-lg"
+            >
+              <Sparkles className="w-4 h-4 text-purple-200" />
+              <span>Gemini AI Inspection Logger</span>
+            </button>
 
             <a
               href={`mailto:owner@rentalhub.com?subject=Inquiry regarding Booking ${booking.id}`}
@@ -446,6 +470,13 @@ export const BookingDetailsPage: React.FC<BookingDetailsPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Gemini 2.5 Flash Automated AI Pre-Dispatch Inspection Logger Modal */}
+      <AiPreDispatchModal
+        booking={booking}
+        isOpen={isAiPreDispatchOpen}
+        onClose={() => setIsAiPreDispatchOpen(false)}
+      />
     </div>
   );
 };

@@ -10,7 +10,7 @@ import { db } from './server/db';
 import { UserModel } from './server/models/User';
 import { authenticate, requireRole, generateToken, AuthenticatedRequest } from './server/middleware/auth';
 import { validateBody, registerSchema, loginSchema, equipmentSchema, bookingSchema } from './server/middleware/validation';
-import { generateDynamicPricing, generateRentalAiAssistantResponse } from './server/geminiService';
+import { generateDynamicPricing, generateRentalAiAssistantResponse, analyzePreDispatchCondition } from './server/geminiService';
 import { User, UserRole } from './src/types';
 
 // SSE Clients Registry for Push-Based Real-Time Availability Events
@@ -318,7 +318,10 @@ async function startServer() {
       return sendError(res, 'FORBIDDEN', 'Access denied. You do not own this equipment listing.', 403);
     }
 
-    const updated = await db.updateEquipment(req.params.id, req.body);
+    // Mass-Assignment Protection: Strip sensitive immutable fields from body inputs
+    const { ownerId, ownerName, approvedByAdmin, rating, reviewCount, id, createdAt, ...allowedUpdates } = req.body;
+
+    const updated = await db.updateEquipment(req.params.id, allowedUpdates);
     sendSuccess(res, updated);
   });
 
@@ -354,6 +357,12 @@ async function startServer() {
   app.get('/api/bookings/:id', authenticate, async (req: AuthenticatedRequest, res) => {
     const booking = await db.getBookingById(req.params.id);
     if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    // IDOR Protection: Only booking customer, owner, or admin can inspect booking details
+    if (req.user!.role !== 'admin' && req.user!.id !== booking.customerId && req.user!.id !== booking.ownerId) {
+      return sendError(res, 'FORBIDDEN', 'Access denied to this booking record.', 403);
+    }
+
     sendSuccess(res, booking);
   });
 
@@ -416,6 +425,20 @@ async function startServer() {
       return sendError(res, result.error?.code || 'BOOKING_FAILED', result.error?.message || 'Failed to create booking.');
     }
 
+    // Auto-create Escrow Hold Entry in MongoDB Escrow Vault
+    await db.createEscrowHold({
+      bookingId: newBooking.id,
+      equipmentId: newBooking.equipmentId,
+      equipmentTitle: newBooking.equipmentTitle,
+      customerId: newBooking.customerId,
+      customerName: newBooking.customerName,
+      ownerId: newBooking.ownerId,
+      ownerName: newBooking.ownerName,
+      amount: subtotal,
+      securityDeposit,
+      actor: 'RentalHub Checkout Engine',
+    });
+
     // Broadcast Real-time Push Availability Event to Connected SSE Clients
     broadcastSseEvent('BOOKING_CREATED', {
       equipmentId: newBooking.equipmentId,
@@ -454,6 +477,13 @@ async function startServer() {
       return sendError(res, result.error?.code || 'UPDATE_FAILED', result.error?.message || 'Failed to update booking status.');
     }
 
+    // Trigger Escrow Release or Dispute on status transitions
+    if (status === 'completed') {
+      await db.releaseEscrow(req.params.id, `${req.user!.name || req.user!.email} (${req.user!.role})`);
+    } else if (status === 'disputed') {
+      await db.disputeEscrow(req.params.id, `${req.user!.name || req.user!.email} (${req.user!.role})`);
+    }
+
     broadcastSseEvent('BOOKING_STATUS_CHANGED', result.booking);
     sendSuccess(res, result.booking);
   });
@@ -462,6 +492,14 @@ async function startServer() {
     const { type, notes, description, photos, claimedAmount } = req.body;
     if (!['before', 'after', 'damage'].includes(type)) {
       return sendError(res, 'VALIDATION_ERROR', 'Condition report type must be before, after, or damage.');
+    }
+
+    const booking = await db.getBookingById(req.params.id);
+    if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    // IDOR Protection: Only booking customer, owner, or admin can update condition
+    if (req.user!.role !== 'admin' && req.user!.id !== booking.customerId && req.user!.id !== booking.ownerId) {
+      return sendError(res, 'FORBIDDEN', 'Access denied to update condition report for this booking.', 403);
     }
 
     const updated = await db.updateBookingCondition(req.params.id, type, {
@@ -474,6 +512,147 @@ async function startServer() {
 
     if (!updated) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
     sendSuccess(res, updated);
+  });
+
+  // --- WEBHOOK-BASED ESCROW TRANSACTIONAL LEDGER ENDPOINTS ---
+  app.get('/api/payments/escrow-ledger/:bookingId', authenticate, async (req: AuthenticatedRequest, res) => {
+    const booking = await db.getBookingById(req.params.bookingId);
+    if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    // IDOR Protection: Only customer, owner, or admin can inspect escrow ledger
+    if (req.user!.role !== 'admin' && req.user!.id !== booking.customerId && req.user!.id !== booking.ownerId) {
+      return sendError(res, 'FORBIDDEN', 'Access denied to this escrow ledger.', 403);
+    }
+
+    let ledger = await db.getEscrowLedger(req.params.bookingId);
+    if (!ledger) {
+      // Auto-initialize simulation hold if missing
+      ledger = await db.createEscrowHold({
+        bookingId: booking.id,
+        equipmentId: booking.equipmentId,
+        equipmentTitle: booking.equipmentTitle,
+        customerId: booking.customerId,
+        customerName: booking.customerName,
+        ownerId: booking.ownerId,
+        ownerName: booking.ownerName,
+        amount: booking.priceBreakdown.subtotal,
+        securityDeposit: booking.priceBreakdown.securityDeposit,
+        actor: 'Stripe Webhook Gateway',
+      });
+    }
+
+    sendSuccess(res, ledger);
+  });
+
+  app.post('/api/payments/escrow-hold', authenticate, async (req: AuthenticatedRequest, res) => {
+    const { bookingId } = req.body;
+    if (!bookingId) return sendError(res, 'VALIDATION_ERROR', 'bookingId is required.');
+
+    const booking = await db.getBookingById(bookingId);
+    if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    if (req.user!.role !== 'admin' && req.user!.id !== booking.customerId && req.user!.id !== booking.ownerId) {
+      return sendError(res, 'FORBIDDEN', 'Access denied to lock escrow for this booking.', 403);
+    }
+
+    const ledger = await db.createEscrowHold({
+      bookingId: booking.id,
+      equipmentId: booking.equipmentId,
+      equipmentTitle: booking.equipmentTitle,
+      customerId: booking.customerId,
+      customerName: booking.customerName,
+      ownerId: booking.ownerId,
+      ownerName: booking.ownerName,
+      amount: booking.priceBreakdown.subtotal,
+      securityDeposit: booking.priceBreakdown.securityDeposit,
+      actor: `${req.user!.name || req.user!.email} (${req.user!.role})`,
+    });
+
+    sendSuccess(res, ledger);
+  });
+
+  app.post('/api/payments/escrow-release', authenticate, async (req: AuthenticatedRequest, res) => {
+    const { bookingId } = req.body;
+    if (!bookingId) return sendError(res, 'VALIDATION_ERROR', 'bookingId is required.');
+
+    const booking = await db.getBookingById(bookingId);
+    if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    // Only owner or admin can trigger/confirm inspection release
+    if (req.user!.role !== 'admin' && req.user!.id !== booking.ownerId) {
+      return sendError(res, 'FORBIDDEN', 'Only the asset owner or admin can release escrow funds.', 403);
+    }
+
+    const updated = await db.releaseEscrow(bookingId, `${req.user!.name || req.user!.email} (${req.user!.role})`);
+    if (!updated) return sendError(res, 'NOT_FOUND', 'Escrow ledger entry not found.', 404);
+
+    broadcastSseEvent('ESCROW_RELEASED', updated);
+    sendSuccess(res, updated);
+  });
+
+  app.post('/api/payments/escrow-dispute', authenticate, async (req: AuthenticatedRequest, res) => {
+    const { bookingId, reason } = req.body;
+    if (!bookingId) return sendError(res, 'VALIDATION_ERROR', 'bookingId is required.');
+
+    const booking = await db.getBookingById(bookingId);
+    if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    if (req.user!.role !== 'admin' && req.user!.id !== booking.customerId && req.user!.id !== booking.ownerId) {
+      return sendError(res, 'FORBIDDEN', 'Access denied to flag escrow dispute.', 403);
+    }
+
+    const updated = await db.disputeEscrow(bookingId, `${req.user!.name || req.user!.email} (${req.user!.role})`, reason || 'Hardware Damage Inspection Dispute');
+    if (!updated) return sendError(res, 'NOT_FOUND', 'Escrow ledger entry not found.', 404);
+
+    broadcastSseEvent('ESCROW_DISPUTED', updated);
+    sendSuccess(res, updated);
+  });
+
+  // --- AUTOMATED AI PRE-DISPATCH INSPECTION LOGGER ENDPOINT ---
+  app.post('/api/ai/pre-dispatch-inspection', authenticate, async (req: AuthenticatedRequest, res) => {
+    const { bookingId, conditionType, photos, notes } = req.body;
+    if (!bookingId || !photos || !Array.isArray(photos)) {
+      return sendError(res, 'VALIDATION_ERROR', 'bookingId and photos array are required.');
+    }
+
+    const booking = await db.getBookingById(bookingId);
+    if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
+
+    // IDOR Check: User must be customer, owner, or admin of this booking
+    if (req.user!.role !== 'admin' && req.user!.id !== booking.customerId && req.user!.id !== booking.ownerId) {
+      return sendError(res, 'FORBIDDEN', 'Access denied to inspect this booking.', 403);
+    }
+
+    const type = (conditionType || 'pickup') as 'pickup' | 'return' | 'damage';
+
+    // Call Gemini 2.5 Flash Structural & Damage Inspection Analyzer
+    const inspection = await analyzePreDispatchCondition(
+      booking.equipmentTitle,
+      type,
+      photos,
+      notes || 'Clean condition pre-dispatch checklist.'
+    );
+
+    // Save condition report to Booking record in MongoDB
+    const updatedBooking = await db.updateBookingCondition(bookingId, type === 'pickup' ? 'before' : type === 'return' ? 'after' : 'damage', {
+      notes: `${notes || ''} [Gemini AI Audit: Integrity ${inspection.structuralIntegrityScore}%, Action: ${inspection.recommendedAction}]`,
+      description: inspection.inspectionSummary,
+      photos,
+      verifiedBy: `Gemini 2.5 Flash AI Auditor (${req.user!.name || req.user!.email})`,
+    });
+
+    await db.logAudit(
+      req.user!.role === 'admin' ? 'admin' : req.user!.role === 'owner' ? 'owner' : 'customer',
+      req.user!.name || req.user!.email,
+      'PRE_DISPATCH_INSPECTION_COMPLETED',
+      bookingId,
+      `Integrity Score: ${inspection.structuralIntegrityScore}%, Action: ${inspection.recommendedAction}`
+    );
+
+    sendSuccess(res, {
+      inspectionReport: inspection,
+      booking: updatedBooking,
+    });
   });
 
   // --- REVIEWS & DISPUTES ---

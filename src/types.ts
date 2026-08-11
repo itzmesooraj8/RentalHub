@@ -268,3 +268,46 @@ export interface AnalyticsData {
   assetUtilizationRate: number;
   co2SavedKg: number;
 }
+
+export type EscrowStatus = 'HELD' | 'RELEASED' | 'DISPUTED' | 'REFUNDED';
+
+export interface EscrowLedgerEntry {
+  action: string;
+  timestamp: string;
+  actor: string;
+  status: EscrowStatus;
+  notes?: string;
+}
+
+export interface EscrowLedger {
+  id: string;
+  bookingId: string;
+  equipmentId: string;
+  equipmentTitle?: string;
+  customerId: string;
+  customerName?: string;
+  ownerId: string;
+  ownerName?: string;
+  amount: number;
+  securityDeposit: number;
+  status: EscrowStatus;
+  heldAt: string;
+  releasedAt?: string;
+  disputedAt?: string;
+  ledgerHistory: EscrowLedgerEntry[];
+  createdAt?: string;
+}
+
+export interface PreDispatchInspectionResult {
+  bookingId: string;
+  conditionType: 'pickup' | 'return' | 'damage';
+  anomalyDetected: boolean;
+  structuralIntegrityScore: number;
+  crackCount: number;
+  leakDetected: boolean;
+  confidenceScore: number;
+  inspectionSummary: string;
+  recommendedAction: 'APPROVE_DISPATCH' | 'NEEDS_OWNER_REVIEW' | 'FLAG_FOR_DISPUTE';
+  timestamp: string;
+}
+
