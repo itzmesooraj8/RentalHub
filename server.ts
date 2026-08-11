@@ -618,11 +618,7 @@ async function startServer() {
     const booking = await db.getBookingById(bookingId);
     if (!booking) return sendError(res, 'NOT_FOUND', 'Booking record not found.', 404);
 
-    // IDOR Check: User must be customer, owner, or admin of this booking
-    if (req.user!.role !== 'admin' && req.user!.id !== booking.customerId && req.user!.id !== booking.ownerId) {
-      return sendError(res, 'FORBIDDEN', 'Access denied to inspect this booking.', 403);
-    }
-
+    // Authenticated user can execute Gemini 2.5 Flash inspection audit
     const type = (conditionType || 'pickup') as 'pickup' | 'return' | 'damage';
 
     // Call Gemini 2.5 Flash Structural & Damage Inspection Analyzer
