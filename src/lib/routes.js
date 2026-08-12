@@ -1,0 +1,40 @@
+export const ROUTES = {
+  home: "/",
+  browse: "/browse",
+  browseCategory: (cat) => `/browse?category=${encodeURIComponent(cat)}`,
+  browseMap: "/browse?view=map",
+  compare: "/compare",
+  equipmentDetail: (id) => `/equipment/${id}`,
+  bookEquipment: (id) => `/equipment/${id}/book`,
+  auth: "/auth",
+  login: "/login",
+  register: "/register",
+  dashboard: "/dashboard",
+  profile: "/profile",
+  favorites: "/favorites",
+  notifications: "/notifications",
+  bookings: "/bookings",
+  bookingDetail: (id) => `/bookings/${id}`,
+  // Customer specific
+  customerDashboard: "/dashboard/customer",
+  // Owner specific
+  ownerDashboard: "/dashboard/owner",
+  ownerEquipment: "/owner/equipment",
+  ownerNewEquipment: "/owner/equipment/new",
+  ownerEquipmentEdit: (id) => `/owner/equipment/${id}/edit`,
+  ownerEquipmentDetail: (id) => `/owner/equipment/${id}`,
+  ownerBookings: "/owner/bookings",
+  ownerCalendar: "/owner/calendar",
+  ownerAnalytics: "/owner/analytics",
+  // Admin specific
+  adminDashboard: "/dashboard/admin",
+  adminUsers: "/admin/users",
+  adminEquipment: "/admin/equipment",
+  adminCategories: "/admin/categories",
+  adminBookings: "/admin/bookings",
+  adminDisputes: "/admin/disputes",
+  adminAnalytics: "/admin/analytics",
+  // System
+  forbidden: "/403",
+  notFound: "/404"
+};
