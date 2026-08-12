@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Sparkles, Trash2, ShieldCheck, MapPin, Truck, Calendar } from "lucide-react";
-import { equipmentService } from "../services/equipmentService";
-import { ROUTES } from "../lib/routes";
+import { equipmentService } from "../services/equipmentService.js";
+import { ROUTES } from "../lib/routes.js";
 export const ComparePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

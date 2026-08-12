@@ -1,7 +1,5 @@
-import mongoose, { Schema, Model } from 'mongoose';
-import { Dispute as DisputeType } from '../../src/types';
-
-const DisputeSchema = new Schema<DisputeType>(
+import mongoose, { Schema } from "mongoose";
+const DisputeSchema = new Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
     bookingId: { type: String, required: true, index: true },
@@ -15,16 +13,14 @@ const DisputeSchema = new Schema<DisputeType>(
     ownerName: { type: String, required: true },
     reason: { type: String, required: true },
     amountClaimed: { type: Number, required: true },
-    status: { type: String, enum: ['open', 'under_review', 'resolved', 'dismissed'], default: 'open', index: true },
+    status: { type: String, enum: ["open", "under_review", "resolved", "dismissed"], default: "open", index: true },
     description: { type: String, required: true },
     beforePhotos: [{ type: String }],
     afterPhotos: [{ type: String }],
-    createdAt: { type: String, default: () => new Date().toISOString() },
+    createdAt: { type: String, default: () => (/* @__PURE__ */ new Date()).toISOString() }
   },
   {
-    timestamps: true,
+    timestamps: true
   }
 );
-
-export const DisputeModel: Model<DisputeType> =
-  (mongoose.models.Dispute as Model<DisputeType>) || mongoose.model<DisputeType>('Dispute', DisputeSchema);
+export const DisputeModel = mongoose.models.Dispute || mongoose.model("Dispute", DisputeSchema);

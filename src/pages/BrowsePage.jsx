@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal, Grid, Map as MapIcon, RotateCcw } from "lucide-react";
-import { EquipmentCard } from "../components/EquipmentCard";
-import { EquipmentMap } from "../components/EquipmentMap";
+import { EquipmentCard } from "../components/EquipmentCard.jsx";
+import { EquipmentMap } from "../components/EquipmentMap.jsx";
 export const BrowsePage = ({
   equipmentList,
   favorites,

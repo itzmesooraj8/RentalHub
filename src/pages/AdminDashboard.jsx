@@ -9,8 +9,8 @@ import {
   Calendar,
   ChevronRight
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { AuditLog } from "../components/admin/AuditLog";
+import { ROUTES } from "../lib/routes.js";
+import { AuditLog } from "../components/admin/AuditLog.jsx";
 export const AdminDashboard = ({
   bookings,
   disputes

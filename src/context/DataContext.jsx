@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { equipmentService } from "../services/equipmentService";
-import { bookingService } from "../services/bookingService";
-import { apiClient } from "../services/apiClient";
+import { equipmentService } from "../services/equipmentService.js";
+import { bookingService } from "../services/bookingService.js";
+import { apiClient } from "../services/apiClient.js";
 const DataContext = createContext(void 0);
 export const DataProvider = ({ children }) => {
   const [equipmentList, setEquipmentList] = useState([]);

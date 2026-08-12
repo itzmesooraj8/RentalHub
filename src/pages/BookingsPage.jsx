@@ -13,7 +13,7 @@ import {
   ChevronRight,
   Loader2
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
+import { ROUTES } from "../lib/routes.js";
 export const BookingsPage = ({
   currentUser,
   bookings,

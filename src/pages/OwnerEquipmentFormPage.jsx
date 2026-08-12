@@ -8,7 +8,7 @@ import {
   Layers,
   CheckCircle
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
+import { ROUTES } from "../lib/routes.js";
 export const OwnerEquipmentFormPage = ({
   currentUser,
   equipmentList,

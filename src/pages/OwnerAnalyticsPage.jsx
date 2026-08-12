@@ -17,7 +17,7 @@ import {
   Tooltip,
   CartesianGrid
 } from "recharts";
-import { analyticsService } from "../services/analyticsService";
+import { analyticsService } from "../services/analyticsService.js";
 export const OwnerAnalyticsPage = ({
   currentUser,
   equipmentList,

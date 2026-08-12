@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogIn, UserPlus, Key, Terminal, Code, Wrench, AlertCircle, Loader2 } from "lucide-react";
-import { TrustScoreBadge } from "../components/TrustScoreBadge";
-import { useAuth } from "../context/AuthContext";
+import { TrustScoreBadge } from "../components/TrustScoreBadge.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 export const AuthPage = ({ onLogin, currentUser }) => {
   const navigate = useNavigate();
   const { login, register, loginRole } = useAuth();

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle, Lock } from "lucide-react";
-import { equipmentService } from "../services/equipmentService";
+import { equipmentService } from "../services/equipmentService.js";
 export const AvailabilityCalendar = ({ equipmentId, onSelectDates, dailyRate }) => {
   const now = /* @__PURE__ */ new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());

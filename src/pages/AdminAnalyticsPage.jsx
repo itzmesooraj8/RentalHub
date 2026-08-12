@@ -16,7 +16,7 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { analyticsService } from "../services/analyticsService";
+import { analyticsService } from "../services/analyticsService.js";
 export const AdminAnalyticsPage = () => {
   const defaultAdminAnalytics = {
     totalUsers: 24,

@@ -5,7 +5,7 @@ import {
   Trash2,
   FolderTree
 } from "lucide-react";
-import { apiClient } from "../services/apiClient";
+import { apiClient } from "../services/apiClient.js";
 export const AdminCategoriesPage = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);

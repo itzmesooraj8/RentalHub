@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { authService } from "../services/authService";
+import { authService } from "../services/authService.js";
 const AuthContext = createContext(void 0);
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);

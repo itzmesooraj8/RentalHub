@@ -12,8 +12,8 @@ import {
   Trash2,
   Star
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { AiPricingModal } from "../components/AiPricingModal";
+import { ROUTES } from "../lib/routes.js";
+import { AiPricingModal } from "../components/AiPricingModal.jsx";
 export const OwnerEquipmentPage = ({
   currentUser,
   equipmentList,

@@ -6,7 +6,7 @@ import {
   MessageSquare,
   Loader2
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
+import { ROUTES } from "../lib/routes.js";
 export const OwnerBookingsPage = ({
   currentUser,
   incomingBookings,

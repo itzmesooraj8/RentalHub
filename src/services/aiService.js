@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient } from "./apiClient.js";
 export const aiService = {
   async smartSearch(query, userLocation, role) {
     const res = await apiClient.post("/api/ai/smart-search", {

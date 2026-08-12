@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient } from "./apiClient.js";
 export const disputeService = {
   async getDisputes() {
     const res = await apiClient.get("/api/disputes");

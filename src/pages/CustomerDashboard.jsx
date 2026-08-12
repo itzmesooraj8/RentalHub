@@ -6,10 +6,10 @@ import {
   Bookmark,
   Search
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { EquipmentCard } from "../components/EquipmentCard";
-import { DamageReportModal } from "../components/DamageReportModal";
-import { TrustScoreBadge } from "../components/TrustScoreBadge";
+import { ROUTES } from "../lib/routes.js";
+import { EquipmentCard } from "../components/EquipmentCard.jsx";
+import { DamageReportModal } from "../components/DamageReportModal.jsx";
+import { TrustScoreBadge } from "../components/TrustScoreBadge.jsx";
 export const CustomerDashboard = ({
   user,
   bookings,

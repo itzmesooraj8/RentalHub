@@ -7,9 +7,9 @@ import {
   XCircle,
   Eye
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { equipmentService } from "../services/equipmentService";
-import { apiClient } from "../services/apiClient";
+import { ROUTES } from "../lib/routes.js";
+import { equipmentService } from "../services/equipmentService.js";
+import { apiClient } from "../services/apiClient.js";
 export const AdminEquipmentPage = () => {
   const [equipmentList, setEquipmentList] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Wrench, ShieldCheck, Leaf, Lock, CheckCircle2 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
+import { ROUTES } from "../lib/routes.js";
 export const Footer = () => {
   return <footer className="bg-[#050505] text-[#666666] text-xs border-t border-[#1F1F1F] pt-12 pb-8 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

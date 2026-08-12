@@ -20,8 +20,8 @@ import {
   Bell,
   CheckSquare
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { useAuth } from "../context/AuthContext";
+import { ROUTES } from "../lib/routes.js";
+import { useAuth } from "../context/AuthContext.jsx";
 export const Navbar = ({
   favoritesCount = 0,
   notificationsCount = 0

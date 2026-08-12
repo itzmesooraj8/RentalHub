@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ShieldCheck, Activity } from "lucide-react";
-import { auditLogService } from "../../services/auditLogService";
+import { auditLogService } from "../../services/auditLogService.js";
 export const AuditLog = ({ logs: propLogs }) => {
   const [fetchedLogs, setFetchedLogs] = useState([]);
   const [loading, setLoading] = useState(!propLogs);

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { MapPin, Star, Heart, ArrowRight } from "lucide-react";
-import { TrustScoreBadge } from "./TrustScoreBadge";
+import { TrustScoreBadge } from "./TrustScoreBadge.jsx";
 export const EquipmentCard = ({
   equipment,
   isFavorite = false,

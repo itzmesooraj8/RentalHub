@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { UserCheck, Mail, Calendar, RefreshCw } from "lucide-react";
-import { TrustScoreBadge } from "../components/TrustScoreBadge";
+import { TrustScoreBadge } from "../components/TrustScoreBadge.jsx";
 export const ProfilePage = ({ user, onUpdateUser, onSwitchRole }) => {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);

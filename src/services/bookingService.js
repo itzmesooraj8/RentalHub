@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient } from "./apiClient.js";
 export const bookingService = {
   async getBookings(filter) {
     const params = new URLSearchParams();

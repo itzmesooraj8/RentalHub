@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { MapPin, Star, ArrowLeft, ArrowRight, Heart } from "lucide-react";
-import { TrustScoreBadge } from "../components/TrustScoreBadge";
-import { AvailabilityCalendar } from "../components/AvailabilityCalendar";
-import { EsgImpactCard } from "../components/EsgImpactCard";
+import { TrustScoreBadge } from "../components/TrustScoreBadge.jsx";
+import { AvailabilityCalendar } from "../components/AvailabilityCalendar.jsx";
+import { EsgImpactCard } from "../components/EsgImpactCard.jsx";
 export const EquipmentDetailPage = ({
   equipmentList,
   reviewsList,

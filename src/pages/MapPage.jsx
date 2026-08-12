@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { MapPin, Search, Compass } from "lucide-react";
-import { EquipmentMap } from "../components/EquipmentMap";
+import { EquipmentMap } from "../components/EquipmentMap.jsx";
 const CATEGORIES = [
   "All",
   "Heavy Machinery",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, Truck, Store, Calendar as CalendarIcon, CreditCard } from "lucide-react";
-import { StripePaymentModal } from "../components/StripePaymentModal";
+import { StripePaymentModal } from "../components/StripePaymentModal.jsx";
 export const BookingFlowPage = ({
   equipmentList,
   currentUser,

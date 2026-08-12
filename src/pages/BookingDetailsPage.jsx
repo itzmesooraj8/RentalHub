@@ -15,10 +15,10 @@ import {
   Lock,
   Sparkles
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { DamageReportModal } from "../components/DamageReportModal";
-import { EscrowLedgerCard } from "../components/EscrowLedgerCard";
-import { AiPreDispatchModal } from "../components/AiPreDispatchModal";
+import { ROUTES } from "../lib/routes.js";
+import { DamageReportModal } from "../components/DamageReportModal.jsx";
+import { EscrowLedgerCard } from "../components/EscrowLedgerCard.jsx";
+import { AiPreDispatchModal } from "../components/AiPreDispatchModal.jsx";
 export const BookingDetailsPage = ({
   currentUser,
   bookings,

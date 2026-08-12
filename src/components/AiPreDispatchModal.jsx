@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { apiClient } from "../services/apiClient";
-import { authService } from "../services/authService";
+import { apiClient } from "../services/apiClient.js";
+import { authService } from "../services/authService.js";
 import { X, Sparkles, RefreshCw, Camera, FileCheck } from "lucide-react";
 export const AiPreDispatchModal = ({
   booking,

@@ -1,28 +1,25 @@
-import { GoogleGenAI, Type } from '@google/genai';
-import { Equipment, DynamicPricingSuggestion } from '../src/types';
-
-function getAiClient(): GoogleGenAI | null {
+import { GoogleGenAI, Type } from "@google/genai";
+function getAiClient() {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
     return null;
   }
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
       headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
+        "User-Agent": "aistudio-build"
+      }
+    }
   });
 }
-
-export async function generateTextEmbedding(text: string): Promise<number[]> {
+export async function generateTextEmbedding(text) {
   const ai = getAiClient();
   if (ai) {
     try {
-      const response: any = await ai.models.embedContent({
-        model: 'text-embedding-004',
-        contents: text,
+      const response = await ai.models.embedContent({
+        model: "text-embedding-004",
+        contents: text
       });
       if (response?.embedding?.values) {
         return response.embedding.values;
@@ -31,11 +28,9 @@ export async function generateTextEmbedding(text: string): Promise<number[]> {
         return response.values;
       }
     } catch (err) {
-      console.warn('Gemini API text-embedding-004 fallback:', err);
+      console.warn("Gemini API text-embedding-004 fallback:", err);
     }
   }
-
-  // 16-vector semantic hashing embedding fallback
   const vector = new Array(16).fill(0);
   const normalized = text.toLowerCase().trim();
   for (let i = 0; i < normalized.length; i++) {
@@ -44,19 +39,12 @@ export async function generateTextEmbedding(text: string): Promise<number[]> {
   }
   return vector;
 }
-
-export async function generateDynamicPricing(
-  equipment: Equipment,
-  recentBookingsCount: number,
-  categoryAvgRate: number
-): Promise<DynamicPricingSuggestion> {
+export async function generateDynamicPricing(equipment, recentBookingsCount, categoryAvgRate) {
   const ai = getAiClient();
   if (!ai) {
-    // Smart heuristic fallback if no key configured
     const demandMultiplier = recentBookingsCount > 3 ? 1.18 : recentBookingsCount > 1 ? 1.08 : 0.95;
     const suggestedRate = Math.round(equipment.dailyRate * demandMultiplier);
-    const demandLevel = recentBookingsCount > 3 ? 'peak' : recentBookingsCount > 1 ? 'high' : 'moderate';
-
+    const demandLevel = recentBookingsCount > 3 ? "peak" : recentBookingsCount > 1 ? "high" : "moderate";
     return {
       equipmentId: equipment.id,
       currentRate: equipment.dailyRate,
@@ -69,10 +57,9 @@ export async function generateDynamicPricing(
         `Upcoming peak weekend demand projected for ${equipment.category}.`
       ],
       seasonalMultiplier: 1.12,
-      projectedRevenueIncreasePct: Math.round(((suggestedRate - equipment.dailyRate) / equipment.dailyRate) * 100)
+      projectedRevenueIncreasePct: Math.round((suggestedRate - equipment.dailyRate) / equipment.dailyRate * 100)
     };
   }
-
   try {
     const prompt = `
     You are an AI Dynamic Pricing Engine for RentalHub, an equipment rental marketplace.
@@ -89,12 +76,11 @@ export async function generateDynamicPricing(
     provide 3 concise bullet-point market reasonings, confidence score (0-100), seasonal multiplier (e.g. 1.15),
     and projected revenue increase percentage. Return as JSON.
     `;
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: "gemini-3.6-flash",
       contents: prompt,
       config: {
-        responseMimeType: 'application/json',
+        responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -108,16 +94,12 @@ export async function generateDynamicPricing(
             seasonalMultiplier: { type: Type.NUMBER },
             projectedRevenueIncreasePct: { type: Type.NUMBER }
           },
-          required: ['suggestedRate', 'demandLevel', 'confidenceScore', 'reasoning', 'seasonalMultiplier', 'projectedRevenueIncreasePct']
+          required: ["suggestedRate", "demandLevel", "confidenceScore", "reasoning", "seasonalMultiplier", "projectedRevenueIncreasePct"]
         }
       }
     });
-
-    const parsed = JSON.parse(response.text || '{}');
-    const validDemand = ['low', 'moderate', 'high', 'peak'].includes(parsed.demandLevel)
-      ? (parsed.demandLevel as 'low' | 'moderate' | 'high' | 'peak')
-      : 'high';
-
+    const parsed = JSON.parse(response.text || "{}");
+    const validDemand = ["low", "moderate", "high", "peak"].includes(parsed.demandLevel) ? parsed.demandLevel : "high";
     return {
       equipmentId: equipment.id,
       currentRate: equipment.dailyRate,
@@ -133,39 +115,29 @@ export async function generateDynamicPricing(
       projectedRevenueIncreasePct: Math.round(parsed.projectedRevenueIncreasePct || 14)
     };
   } catch (error) {
-    console.error('Gemini pricing error:', error);
+    console.error("Gemini pricing error:", error);
     return {
       equipmentId: equipment.id,
       currentRate: equipment.dailyRate,
       suggestedRate: Math.round(equipment.dailyRate * 1.12),
-      demandLevel: 'high',
+      demandLevel: "high",
       confidenceScore: 85,
       reasoning: [
-        'Demand spike detected for local equipment rentals.',
-        'Adjusting rate aligns with current regional benchmarks.',
-        'Projected utilization remains strong at 85%+'
+        "Demand spike detected for local equipment rentals.",
+        "Adjusting rate aligns with current regional benchmarks.",
+        "Projected utilization remains strong at 85%+"
       ],
       seasonalMultiplier: 1.12,
       projectedRevenueIncreasePct: 12
     };
   }
 }
-
-export async function generateRentalAiAssistantResponse(
-  userQuery: string,
-  availableEquipment: Equipment[],
-  contextRole: string
-): Promise<string> {
+export async function generateRentalAiAssistantResponse(userQuery, availableEquipment, contextRole) {
   const ai = getAiClient();
-  const eqSummary = availableEquipment
-    .slice(0, 8)
-    .map((e) => `- ${e.title} ($${e.dailyRate}/day, ${e.category}, ${e.location})`)
-    .join('\n');
-
+  const eqSummary = availableEquipment.slice(0, 8).map((e) => `- ${e.title} ($${e.dailyRate}/day, ${e.category}, ${e.location})`).join("\n");
   if (!ai) {
     return `Hello! I am RentalHub's AI Concierge. Based on your request ("${userQuery}"), I recommend checking out our top-rated mini excavators and cinema cameras. Ensure you check availability calendars and KYC verification status before booking. How else can I assist your rental journey?`;
   }
-
   try {
     const prompt = `
     You are RentalHub AI Assistant, an expert AI advisor for an equipment rental marketplace (heavy machinery, tools, sound gear, drones, trailers).
@@ -180,46 +152,28 @@ export async function generateRentalAiAssistantResponse(
     - If recommending equipment, cite specific items from the catalog.
     - Keep output under 180 words with bullet points where appropriate.
     `;
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: "gemini-3.6-flash",
       contents: prompt
     });
-
-    return response.text || 'I am here to help you navigate equipment rentals on RentalHub!';
+    return response.text || "I am here to help you navigate equipment rentals on RentalHub!";
   } catch (error) {
-    console.error('Gemini Assistant error:', error);
+    console.error("Gemini Assistant error:", error);
     return `I am RentalHub AI Assistant. I recommend exploring our verified listings in Heavy Machinery, Power Tools, and Audio/Event gear!`;
   }
 }
-
-export async function analyzePreDispatchCondition(
-  equipmentTitle: string,
-  conditionType: 'pickup' | 'return' | 'damage',
-  photos: string[],
-  notes: string
-): Promise<{
-  anomalyDetected: boolean;
-  structuralIntegrityScore: number;
-  crackCount: number;
-  leakDetected: boolean;
-  confidenceScore: number;
-  inspectionSummary: string;
-  recommendedAction: 'APPROVE_DISPATCH' | 'NEEDS_OWNER_REVIEW' | 'FLAG_FOR_DISPUTE';
-}> {
+export async function analyzePreDispatchCondition(equipmentTitle, conditionType, photos, notes) {
   const ai = getAiClient();
   const fallback = {
-    anomalyDetected: notes.toLowerCase().includes('scratch') || notes.toLowerCase().includes('dent') || notes.toLowerCase().includes('leak'),
-    structuralIntegrityScore: notes.toLowerCase().includes('damage') ? 78 : 98,
-    crackCount: notes.toLowerCase().includes('crack') ? 1 : 0,
-    leakDetected: notes.toLowerCase().includes('leak') || notes.toLowerCase().includes('oil'),
+    anomalyDetected: notes.toLowerCase().includes("scratch") || notes.toLowerCase().includes("dent") || notes.toLowerCase().includes("leak"),
+    structuralIntegrityScore: notes.toLowerCase().includes("damage") ? 78 : 98,
+    crackCount: notes.toLowerCase().includes("crack") ? 1 : 0,
+    leakDetected: notes.toLowerCase().includes("leak") || notes.toLowerCase().includes("oil"),
     confidenceScore: 96,
-    inspectionSummary: `Gemini 2.5 Flash inspection completed for ${equipmentTitle} (${conditionType} phase). Structural integrity evaluated at ${notes.toLowerCase().includes('damage') ? '78%' : '98%'}. Clean tracks & seals verified.`,
-    recommendedAction: (notes.toLowerCase().includes('damage') ? 'NEEDS_OWNER_REVIEW' : 'APPROVE_DISPATCH') as 'APPROVE_DISPATCH' | 'NEEDS_OWNER_REVIEW' | 'FLAG_FOR_DISPUTE',
+    inspectionSummary: `Gemini 2.5 Flash inspection completed for ${equipmentTitle} (${conditionType} phase). Structural integrity evaluated at ${notes.toLowerCase().includes("damage") ? "78%" : "98%"}. Clean tracks & seals verified.`,
+    recommendedAction: notes.toLowerCase().includes("damage") ? "NEEDS_OWNER_REVIEW" : "APPROVE_DISPATCH"
   };
-
   if (!ai) return fallback;
-
   try {
     const prompt = `
     Act as an AI Pre-Dispatch Structural & Damage Inspection Auditor for heavy equipment and professional machinery.
@@ -239,12 +193,11 @@ export async function analyzePreDispatchCondition(
     "inspectionSummary" (short 2-line technical summary),
     "recommendedAction" ("APPROVE_DISPATCH" | "NEEDS_OWNER_REVIEW" | "FLAG_FOR_DISPUTE")
     `;
-
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        responseMimeType: 'application/json',
+        responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -254,22 +207,21 @@ export async function analyzePreDispatchCondition(
             leakDetected: { type: Type.BOOLEAN },
             confidenceScore: { type: Type.NUMBER },
             inspectionSummary: { type: Type.STRING },
-            recommendedAction: { type: Type.STRING },
+            recommendedAction: { type: Type.STRING }
           },
           required: [
-            'anomalyDetected',
-            'structuralIntegrityScore',
-            'crackCount',
-            'leakDetected',
-            'confidenceScore',
-            'inspectionSummary',
-            'recommendedAction',
-          ],
-        },
-      },
+            "anomalyDetected",
+            "structuralIntegrityScore",
+            "crackCount",
+            "leakDetected",
+            "confidenceScore",
+            "inspectionSummary",
+            "recommendedAction"
+          ]
+        }
+      }
     });
-
-    const parsed = JSON.parse(response.text || '{}');
+    const parsed = JSON.parse(response.text || "{}");
     return {
       anomalyDetected: Boolean(parsed.anomalyDetected),
       structuralIntegrityScore: Number(parsed.structuralIntegrityScore || 95),
@@ -277,57 +229,33 @@ export async function analyzePreDispatchCondition(
       leakDetected: Boolean(parsed.leakDetected),
       confidenceScore: Number(parsed.confidenceScore || 94),
       inspectionSummary: parsed.inspectionSummary || fallback.inspectionSummary,
-      recommendedAction: ['APPROVE_DISPATCH', 'NEEDS_OWNER_REVIEW', 'FLAG_FOR_DISPUTE'].includes(parsed.recommendedAction)
-        ? (parsed.recommendedAction as any)
-        : 'APPROVE_DISPATCH',
+      recommendedAction: ["APPROVE_DISPATCH", "NEEDS_OWNER_REVIEW", "FLAG_FOR_DISPUTE"].includes(parsed.recommendedAction) ? parsed.recommendedAction : "APPROVE_DISPATCH"
     };
   } catch (err) {
-    console.error('Gemini Pre-Dispatch Inspection Error:', err);
+    console.error("Gemini Pre-Dispatch Inspection Error:", err);
     return fallback;
   }
 }
-
-export async function evaluateBookingRiskScore(
-  renterTrustScore: number,
-  renterCompletedRentals: number,
-  ownerTrustScore: number,
-  equipmentTitle: string,
-  dailyRate: number,
-  rentalDays: number,
-  hasDisputeHistory: boolean
-): Promise<{
-  riskScore: number;
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-  recommendedAction: 'SAFE_TO_CONFIRM' | 'MANUAL_REVIEW_REQUIRED' | 'REJECT_RESERVATION';
-  riskBreakdown: { factor: string; score: number; status: string }[];
-  explanation: string;
-}> {
+export async function evaluateBookingRiskScore(renterTrustScore, renterCompletedRentals, ownerTrustScore, equipmentTitle, dailyRate, rentalDays, hasDisputeHistory) {
   const baseScore = Math.max(
     0,
     100 - (renterTrustScore * 0.4 + ownerTrustScore * 0.3 + Math.min(renterCompletedRentals * 2, 20))
   );
-
   const durationMultiplier = rentalDays > 14 ? 15 : rentalDays > 7 ? 8 : 0;
   const disputePenalty = hasDisputeHistory ? 25 : 0;
-
   const totalRiskScore = Math.min(99, Math.max(5, Math.round(baseScore + durationMultiplier + disputePenalty)));
-  const riskLevel = totalRiskScore < 30 ? 'LOW' : totalRiskScore < 65 ? 'MEDIUM' : 'HIGH';
-  const recommendedAction =
-    riskLevel === 'LOW' ? 'SAFE_TO_CONFIRM' : riskLevel === 'MEDIUM' ? 'MANUAL_REVIEW_REQUIRED' : 'REJECT_RESERVATION';
-
+  const riskLevel = totalRiskScore < 30 ? "LOW" : totalRiskScore < 65 ? "MEDIUM" : "HIGH";
+  const recommendedAction = riskLevel === "LOW" ? "SAFE_TO_CONFIRM" : riskLevel === "MEDIUM" ? "MANUAL_REVIEW_REQUIRED" : "REJECT_RESERVATION";
   return {
     riskScore: totalRiskScore,
     riskLevel,
     recommendedAction,
     riskBreakdown: [
-      { factor: 'Renter Verification & Trust', score: renterTrustScore, status: renterTrustScore > 90 ? 'EXCELLENT' : 'MODERATE' },
-      { factor: 'Fleet Owner Reliability', score: ownerTrustScore, status: ownerTrustScore > 90 ? 'EXCELLENT' : 'GOOD' },
-      { factor: 'Rental Duration Anomaly', score: Math.max(0, 100 - durationMultiplier * 4), status: rentalDays <= 7 ? 'NORMAL' : 'EXTENDED_RENTAL' },
-      { factor: 'Dispute & Damage History', score: hasDisputeHistory ? 50 : 100, status: hasDisputeHistory ? 'PREVIOUS_DISPUTE' : 'CLEAN_RECORD' },
+      { factor: "Renter Verification & Trust", score: renterTrustScore, status: renterTrustScore > 90 ? "EXCELLENT" : "MODERATE" },
+      { factor: "Fleet Owner Reliability", score: ownerTrustScore, status: ownerTrustScore > 90 ? "EXCELLENT" : "GOOD" },
+      { factor: "Rental Duration Anomaly", score: Math.max(0, 100 - durationMultiplier * 4), status: rentalDays <= 7 ? "NORMAL" : "EXTENDED_RENTAL" },
+      { factor: "Dispute & Damage History", score: hasDisputeHistory ? 50 : 100, status: hasDisputeHistory ? "PREVIOUS_DISPUTE" : "CLEAN_RECORD" }
     ],
-    explanation:
-      riskLevel === 'LOW'
-        ? `Booking is classified as LOW RISK (${totalRiskScore}/100). Verified renter trust score (${renterTrustScore}%) and clean damage history allow instant automated escrow locking.`
-        : `Booking is classified as ${riskLevel} RISK (${totalRiskScore}/100). Longer rental duration (${rentalDays} days) or past dispute indicators require manual owner sign-off.`,
+    explanation: riskLevel === "LOW" ? `Booking is classified as LOW RISK (${totalRiskScore}/100). Verified renter trust score (${renterTrustScore}%) and clean damage history allow instant automated escrow locking.` : `Booking is classified as ${riskLevel} RISK (${totalRiskScore}/100). Longer rental duration (${rentalDays} days) or past dispute indicators require manual owner sign-off.`
   };
 }

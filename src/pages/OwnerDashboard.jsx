@@ -6,9 +6,9 @@ import {
   ChevronRight,
   Plus
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { AiPricingModal } from "../components/AiPricingModal";
-import { TrustScoreBadge } from "../components/TrustScoreBadge";
+import { ROUTES } from "../lib/routes.js";
+import { AiPricingModal } from "../components/AiPricingModal.jsx";
+import { TrustScoreBadge } from "../components/TrustScoreBadge.jsx";
 export const OwnerDashboard = ({
   user,
   equipmentList,

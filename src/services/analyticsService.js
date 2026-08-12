@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient } from "./apiClient.js";
 export const analyticsService = {
   async getOwnerAnalytics(ownerId) {
     const res = await apiClient.get(`/api/analytics/owner/${ownerId}`);

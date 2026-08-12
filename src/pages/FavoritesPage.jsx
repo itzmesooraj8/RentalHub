@@ -1,7 +1,7 @@
 import { Bookmark, Compass } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ROUTES } from "../lib/routes";
-import { EquipmentCard } from "../components/EquipmentCard";
+import { ROUTES } from "../lib/routes.js";
+import { EquipmentCard } from "../components/EquipmentCard.jsx";
 export const FavoritesPage = ({
   currentUser,
   favoriteItems,

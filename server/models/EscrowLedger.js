@@ -1,7 +1,5 @@
-import mongoose, { Schema, Model } from 'mongoose';
-import { EscrowLedger as EscrowLedgerType } from '../../src/types';
-
-const EscrowLedgerSchema = new Schema<EscrowLedgerType>(
+import mongoose, { Schema } from "mongoose";
+const EscrowLedgerSchema = new Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
     bookingId: { type: String, required: true, unique: true, index: true },
@@ -15,11 +13,11 @@ const EscrowLedgerSchema = new Schema<EscrowLedgerType>(
     securityDeposit: { type: Number, required: true },
     status: {
       type: String,
-      enum: ['HELD', 'RELEASED', 'DISPUTED', 'REFUNDED'],
-      default: 'HELD',
-      index: true,
+      enum: ["HELD", "RELEASED", "DISPUTED", "REFUNDED"],
+      default: "HELD",
+      index: true
     },
-    heldAt: { type: String, default: () => new Date().toISOString() },
+    heldAt: { type: String, default: () => (/* @__PURE__ */ new Date()).toISOString() },
     releasedAt: { type: String },
     disputedAt: { type: String },
     ledgerHistory: [
@@ -28,16 +26,13 @@ const EscrowLedgerSchema = new Schema<EscrowLedgerType>(
         timestamp: { type: String, required: true },
         actor: { type: String, required: true },
         status: { type: String, required: true },
-        notes: { type: String },
-      },
+        notes: { type: String }
+      }
     ],
-    createdAt: { type: String, default: () => new Date().toISOString() },
+    createdAt: { type: String, default: () => (/* @__PURE__ */ new Date()).toISOString() }
   },
   {
-    timestamps: true,
+    timestamps: true
   }
 );
-
-export const EscrowLedgerModel: Model<EscrowLedgerType> =
-  (mongoose.models.EscrowLedger as Model<EscrowLedgerType>) ||
-  mongoose.model<EscrowLedgerType>('EscrowLedger', EscrowLedgerSchema);
+export const EscrowLedgerModel = mongoose.models.EscrowLedger || mongoose.model("EscrowLedger", EscrowLedgerSchema);

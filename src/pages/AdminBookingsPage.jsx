@@ -5,7 +5,7 @@ import {
   Search,
   Eye
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
+import { ROUTES } from "../lib/routes.js";
 export const AdminBookingsPage = ({ bookings }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");

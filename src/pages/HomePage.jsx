@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, ShieldCheck, ArrowRight, Leaf, Truck, CheckCircle2, Wrench } from "lucide-react";
-import { EquipmentCard } from "../components/EquipmentCard";
-import { EquipmentMap } from "../components/EquipmentMap";
-import { EsgImpactCard } from "../components/EsgImpactCard";
+import { EquipmentCard } from "../components/EquipmentCard.jsx";
+import { EquipmentMap } from "../components/EquipmentMap.jsx";
+import { EsgImpactCard } from "../components/EsgImpactCard.jsx";
 export const HomePage = ({
   equipmentList,
   favorites,

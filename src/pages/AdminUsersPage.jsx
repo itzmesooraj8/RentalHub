@@ -7,7 +7,7 @@ import {
   Filter,
   Clock
 } from "lucide-react";
-import { apiClient } from "../services/apiClient";
+import { apiClient } from "../services/apiClient.js";
 export const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);

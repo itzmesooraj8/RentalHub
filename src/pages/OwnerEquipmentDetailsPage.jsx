@@ -10,8 +10,8 @@ import {
   Star,
   MapPin
 } from "lucide-react";
-import { ROUTES } from "../lib/routes";
-import { AiPricingModal } from "../components/AiPricingModal";
+import { ROUTES } from "../lib/routes.js";
+import { AiPricingModal } from "../components/AiPricingModal.jsx";
 export const OwnerEquipmentDetailsPage = ({
   currentUser,
   equipmentList,
