@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -760,21 +761,9 @@ data: ${JSON.stringify({ message: "Live SSE Availability Stream Connected" })}
       const url = req.originalUrl;
       if (url.startsWith("/api")) return next();
       try {
-        let template = await vite.transformIndexHtml(
-          url,
-          `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RentalHub</title>
-  </head>
-  <body class="bg-[#0A0A0A] text-slate-100 font-sans antialiased">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"><\/script>
-  </body>
-</html>`
-        );
+        const indexPath = path.resolve(__dirname, "index.html");
+        const rawHtml = fs.readFileSync(indexPath, "utf8");
+        let template = await vite.transformIndexHtml(url, rawHtml);
         res.status(200).set({ "Content-Type": "text/html" }).end(template);
       } catch (e) {
         vite.ssrFixStacktrace(e);
